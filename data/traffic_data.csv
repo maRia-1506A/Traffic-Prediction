@@ -1,0 +1,6 @@
+date,day,road,hour,rain,traffic_level
+2026-10-01,Thursday,Mirpur-Farmgate,8,No,High
+2026-10-01,Thursday,Mirpur-Farmgate,12,No,Medium
+2026-10-01,Thursday,Mirpur-Farmgate,18,Yes,High
+2026-10-02,Friday,Mirpur-Farmgate,8,No,Medium
+2026-10-02,Friday,Mirpur-Farmgate,12,No,Low
