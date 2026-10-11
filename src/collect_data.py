@@ -11,13 +11,25 @@ import requests
 import pandas as pd
 import numpy as np
 
+# Load .env file if python-dotenv is installed
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # Output CSV Path
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 CSV_PATH = os.path.join(DATA_DIR, "traffic_data.csv")
 
-# Google Maps API Key (Optional: Set as environment variable or paste here)
-# If empty, the collector uses realistic calibrated simulation based on Dhaka traffic models
-GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyC6YC7R7dFAxP9IosXGauLP8s7o0xZ3DgI")
+# ---------------------------------------------------------
+# API Keys (Loaded from environment variables or .env)
+# ---------------------------------------------------------
+# TomTom Routing & Traffic API Key (https://developer.tomtom.com/)
+TOMTOM_API_KEY = os.getenv("TOMTOM_API_KEY", "")
+
+# OpenWeatherMap API Key (https://openweathermap.org/api)
+OPENWEATHERMAP_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "")
 
 # ---------------------------------------------------------
 # 1. Route Configuration & Infrastructure Metadata
@@ -70,14 +82,66 @@ ROUTES = [
 ]
 
 # ---------------------------------------------------------
-# 2. Weather Fetcher (Open-Meteo API: 100% Free, No Key Required)
+# 2. Weather Fetcher (OpenWeatherMap API with Open-Meteo Fallback)
 # ---------------------------------------------------------
 def get_live_weather(lat: float, lon: float):
     """
-    Fetches real-time weather metrics from Open-Meteo API.
+    Fetches real-time weather metrics using OpenWeatherMap API.
+    Falls back gracefully to Open-Meteo (free, no key) if the key is missing or fails.
     """
-    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code&timezone=auto"
+    if OPENWEATHERMAP_API_KEY:
+        try:
+            url = "https://api.openweathermap.org/data/2.5/weather"
+            params = {
+                "lat": lat,
+                "lon": lon,
+                "appid": OPENWEATHERMAP_API_KEY,
+                "units": "metric"
+            }
+            response = requests.get(url, params=params, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                temp_c = data.get("main", {}).get("temp", 28.0)
+                
+                # Precipitation in mm (rain in last 1 hour)
+                rain_data = data.get("rain", {})
+                precip_mm = rain_data.get("1h", rain_data.get("3h", 0.0))
+
+                weather_list = data.get("weather", [])
+                weather_id = weather_list[0].get("id", 800) if weather_list else 800
+
+                # OpenWeatherMap weather code condition classification
+                if 200 <= weather_id < 300:
+                    weather = "Heavy Rain"  # Thunderstorm
+                elif 300 <= weather_id < 400:
+                    weather = "Light Rain"  # Drizzle
+                elif 500 <= weather_id < 600:
+                    if weather_id in [502, 503, 504, 522] or precip_mm >= 4.0:
+                        weather = "Heavy Rain"
+                    else:
+                        weather = "Light Rain"
+                elif 700 <= weather_id < 800:
+                    weather = "Fog"         # Mist, Fog, Haze
+                elif weather_id == 800:
+                    weather = "Clear"
+                elif 801 <= weather_id <= 804:
+                    weather = "Cloudy"
+                else:
+                    weather = "Clear"
+
+                return {
+                    "weather": weather,
+                    "temperature_c": round(temp_c, 1),
+                    "rainfall_mm": round(precip_mm, 1),
+                }
+            else:
+                print(f"[Warning] OpenWeatherMap API returned status {response.status_code}. Using fallback.")
+        except Exception as e:
+            print(f"[Warning] OpenWeatherMap API error: {e}. Using fallback.")
+
+    # Graceful Fallback: Open-Meteo API (100% Free, No Key Required)
     try:
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code&timezone=auto"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json().get("current", {})
@@ -103,82 +167,58 @@ def get_live_weather(lat: float, lon: float):
                 "rainfall_mm": round(precip_mm, 1),
             }
     except Exception as e:
-        print(f"[Warning] Weather API error: {e}. Using defaults.")
+        print(f"[Warning] Weather fallback error: {e}. Using defaults.")
 
     return {"weather": "Clear", "temperature_c": 28.0, "rainfall_mm": 0.0}
 
 # ---------------------------------------------------------
-# 3. Traffic Data Fetcher (Google Maps Routes / Distance Matrix API)
+# 3. Traffic Data Fetcher (TomTom Routing & Traffic API)
 # ---------------------------------------------------------
 def get_live_traffic(route: dict, now: datetime.datetime, weather: dict):
     """
-    Fetches live traffic duration using modern Google Routes API or Distance Matrix API,
-    falling back to calibrated Dhaka traffic simulation if unavailable.
+    Fetches live traffic travel time and delay using TomTom Routing & Traffic API,
+    falling back to calibrated simulation if key is not configured or unavailable.
     """
     orig_lat, orig_lon = route["origin_coords"]
     dest_lat, dest_lon = route["dest_coords"]
     free_flow = route["free_flow_time_min"]
     road_len = route["road_length_km"]
 
-    # Try Google Maps API if key is supplied
-    if GOOGLE_MAPS_API_KEY:
-        # 1. Try modern Google Routes API (v2)
+    # Try TomTom Routing & Traffic API if key is supplied
+    if TOMTOM_API_KEY:
         try:
-            routes_url = "https://routes.googleapis.com/directions/v2:computeRoutes"
-            headers = {
-                "Content-Type": "application/json",
-                "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
-                "X-Goog-FieldMask": "routes.duration,routes.distanceMeters,routes.staticDuration"
+            locations = f"{orig_lat},{orig_lon}:{dest_lat},{dest_lon}"
+            url = f"https://api.tomtom.com/routing/1/calculateRoute/{locations}/json"
+            params = {
+                "key": TOMTOM_API_KEY,
+                "traffic": "true",
+                "travelMode": "car",
+                "computeTravelTimeFor": "all"
             }
-            body = {
-                "origin": {"location": {"latLng": {"latitude": orig_lat, "longitude": orig_lon}}},
-                "destination": {"location": {"latLng": {"latitude": dest_lat, "longitude": dest_lon}}},
-                "travelMode": "DRIVE",
-                "routingPreference": "TRAFFIC_AWARE"
-            }
-            res = requests.post(routes_url, headers=headers, json=body, timeout=5)
+            res = requests.get(url, params=params, timeout=7)
             if res.status_code == 200:
                 data = res.json()
                 if "routes" in data and len(data["routes"]) > 0:
-                    r_info = data["routes"][0]
-                    # Format: '1840s'
-                    dur_str = r_info.get("duration", "0s").replace("s", "")
-                    static_str = r_info.get("staticDuration", dur_str).replace("s", "")
-                    traffic_sec = float(dur_str) if dur_str else free_flow * 60
-                    static_sec = float(static_str) if static_str else free_flow * 60
+                    summary = data["routes"][0].get("summary", {})
+                    travel_time_sec = summary.get("travelTimeInSeconds")
+                    if travel_time_sec:
+                        no_traffic_sec = summary.get("noTrafficTravelTimeInSeconds")
+                        if not no_traffic_sec:
+                            traffic_delay_sec = summary.get("trafficDelayInSeconds", 0)
+                            no_traffic_sec = max(travel_time_sec - traffic_delay_sec, free_flow * 60)
 
-                    travel_time_min = round(traffic_sec / 60.0, 1)
-                    free_flow_time_min = round(static_sec / 60.0, 1)
-                    speed_kmh = round(road_len / (travel_time_min / 60.0), 1)
+                        travel_time_min = round(travel_time_sec / 60.0, 1)
+                        free_flow_time_min = round(no_traffic_sec / 60.0, 1)
+                        distance_km = round(summary.get("lengthInMeters", road_len * 1000) / 1000.0, 1)
+                        speed_kmh = round(distance_km / max(travel_time_min / 60.0, 0.01), 1)
 
-                    ratio = travel_time_min / max(free_flow_time_min, 1)
-                    traffic_level = "NORMAL" if ratio < 1.25 else ("SLOW" if ratio < 1.75 else "TRAFFIC_JAM")
-                    return travel_time_min, free_flow_time_min, speed_kmh, traffic_level
-        except Exception:
-            pass
-
-        # 2. Try Distance Matrix API
-        try:
-            url = (
-                f"https://maps.googleapis.com/maps/api/distancematrix/json"
-                f"?origins={orig_lat},{orig_lon}&destinations={dest_lat},{dest_lon}"
-                f"&departure_time=now&traffic_model=best_guess&key={GOOGLE_MAPS_API_KEY}"
-            )
-            res = requests.get(url, timeout=5).json()
-            if "rows" in res and res.get("rows"):
-                elem = res["rows"][0]["elements"][0]
-                if elem.get("status") == "OK":
-                    static_sec = elem["duration"]["value"]
-                    traffic_sec = elem.get("duration_in_traffic", {}).get("value", static_sec)
-                    travel_time_min = round(traffic_sec / 60.0, 1)
-                    free_flow_time_min = round(static_sec / 60.0, 1)
-                    speed_kmh = round(road_len / (travel_time_min / 60.0), 1)
-
-                    ratio = travel_time_min / max(free_flow_time_min, 1)
-                    traffic_level = "NORMAL" if ratio < 1.25 else ("SLOW" if ratio < 1.75 else "TRAFFIC_JAM")
-                    return travel_time_min, free_flow_time_min, speed_kmh, traffic_level
-        except Exception:
-            pass
+                        ratio = travel_time_min / max(free_flow_time_min, 1)
+                        traffic_level = "NORMAL" if ratio < 1.25 else ("SLOW" if ratio < 1.75 else "TRAFFIC_JAM")
+                        return travel_time_min, free_flow_time_min, speed_kmh, traffic_level
+            else:
+                print(f"[Warning] TomTom API returned status {res.status_code}. Using simulation fallback.")
+        except Exception as e:
+            print(f"[Warning] TomTom API error: {e}. Using simulation fallback.")
 
     # Calibrated Simulation Model (Dhaka Rush Hour + Weather Effects)
     hour = now.hour + (now.minute / 60.0)
@@ -235,6 +275,11 @@ def collect_current_snapshot():
     day_name = now.strftime("%A")
     hour_val = now.hour
     is_weekend = "Yes" if now.weekday() in [4, 5] else "No"
+
+    traffic_mode = "Live TomTom API" if TOMTOM_API_KEY else "Simulation fallback (TOMTOM_API_KEY not set)"
+    weather_mode = "Live OpenWeatherMap API" if OPENWEATHERMAP_API_KEY else "Live Open-Meteo API (Free fallback)"
+    print(f"🚦 Traffic Mode: {traffic_mode}")
+    print(f"🌤️  Weather Mode: {weather_mode}")
 
     # Load existing CSV to compute lag features if available
     if os.path.exists(CSV_PATH):
