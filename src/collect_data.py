@@ -1,3 +1,8 @@
+timestamp,road_route_id,latitude,longitude,traffic_speed_kmh,travel_time_min,free_flow_time_min,traffic_level,day_of_week,hour,is_weekend,weather,temperature_c,rainfall_mm,road_type,road_length_km,num_lanes,accident_incident,road_construction,special_event,prev_traffic_5min,prev_traffic_15min,prev_traffic_30min,target_traffic_level
+2026-10-11 16:53,Savar -> Dhanmondi,23.8467,90.2575,41.2,35.7,35.0,NORMAL,Sunday,16,No,Clear,30.8,0.0,Highway/Arterial,24.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-11 16:53,Mirpur 10 -> Farmgate,23.8069,90.3687,33.6,15.2,15.0,NORMAL,Sunday,16,No,Clear,33.3,0.0,Primary Urban,8.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-11 16:53,Uttara -> Mohakhali,23.8759,90.3795,33.3,25.6,22.0,NORMAL,Sunday,16,No,Clear,32.4,0.0,Expressway/Primary,14.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-11 16:53,Savar -> Ashulia,23.8467,90.2575,38.6,14.0,12.0,NORMAL,Sunday,16,No,Clear,30.8,0.0,Arterial,9.0,4,Yes,No,No,NORMAL,NORMAL,NORMAL,NORMAL
 """
 Traffic Data Collector
 Fetches real-time traffic and weather data, computes lag features,
