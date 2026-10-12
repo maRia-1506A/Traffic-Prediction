@@ -18,6 +18,14 @@ CSV_PATH = os.path.join(DATA_DIR, "traffic_data.csv")
 # Google Maps API Key (Optional: Set as environment variable or paste here)
 # If empty, the collector uses realistic calibrated simulation based on Dhaka traffic models
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY", "AIzaSyC6YC7R7dFAxP9IosXGauLP8s7o0xZ3DgI")
+OPENWEATHER_API_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+if not OPENWEATHER_API_KEY:
+    env_file = os.path.join(os.path.dirname(__file__), "..", ".env")
+    if os.path.exists(env_file):
+        with open(env_file, "r") as f:
+            for line in f:
+                if line.strip().startswith("OPENWEATHER_API_KEY="):
+                    OPENWEATHER_API_KEY = line.strip().split("=", 1)[1].strip("\"'")
 
 # ---------------------------------------------------------
 # 1. Route Configuration & Infrastructure Metadata
@@ -70,12 +78,45 @@ ROUTES = [
 ]
 
 # ---------------------------------------------------------
-# 2. Weather Fetcher (Open-Meteo API: 100% Free, No Key Required)
+# 2. Weather Fetcher (OpenWeatherMap + Open-Meteo Fallback)
 # ---------------------------------------------------------
 def get_live_weather(lat: float, lon: float):
     """
-    Fetches real-time weather metrics from Open-Meteo API.
+    Fetches real-time weather metrics using OpenWeatherMap API (if key is valid),
+    falling back to free Open-Meteo API.
     """
+    # 1. Try OpenWeatherMap API if key is provided
+    if OPENWEATHER_API_KEY:
+        try:
+            owm_url = (
+                f"https://api.openweathermap.org/data/2.5/weather"
+                f"?lat={lat}&lon={lon}&appid={OPENWEATHER_API_KEY}&units=metric"
+            )
+            response = requests.get(owm_url, timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                main_info = data.get("weather", [{}])[0].get("main", "Clear")
+                temp_c = data.get("main", {}).get("temp", 28.0)
+                rainfall_mm = data.get("rain", {}).get("1h", 0.0)
+
+                if "Rain" in main_info:
+                    weather = "Heavy Rain" if rainfall_mm > 5.0 else "Light Rain"
+                elif "Cloud" in main_info:
+                    weather = "Cloudy"
+                elif main_info in ["Fog", "Mist", "Haze"]:
+                    weather = "Fog"
+                else:
+                    weather = "Clear"
+
+                return {
+                    "weather": weather,
+                    "temperature_c": round(temp_c, 1),
+                    "rainfall_mm": round(rainfall_mm, 1),
+                }
+        except Exception as e:
+            print(f"[Info] OpenWeatherMap request failed: {e}. Falling back to Open-Meteo.")
+
+    # 2. Fallback to Open-Meteo API (100% Free, No API Key Required)
     url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code&timezone=auto"
     try:
         response = requests.get(url, timeout=5)
