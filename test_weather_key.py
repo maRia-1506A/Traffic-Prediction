@@ -83,17 +83,6 @@ def test_weatherapi(api_key: str):
 
 if __name__ == "__main__":
     key = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_KEY
-    if not key and os.path.exists(".env"):
-        with open(".env", "r") as f:
-            for line in f:
-                if line.startswith("OPENWEATHER_API_KEY="):
-                    key = line.strip().split("=", 1)[1].strip("\"'")
-    if not key:
-        key = input("Enter your Weather API Key to test: ").strip()
-    
-    if key:
-        success = test_openweathermap(key)
-        if not success:
-            test_weatherapi(key)
-    else:
-        print("No API key provided. Run with: python test_weather_key.py <API_KEY>")
+    success = test_openweathermap(key)
+    if not success:
+        test_weatherapi(key)
