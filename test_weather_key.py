@@ -10,13 +10,28 @@ import json
 import urllib.request
 import urllib.error
 
-# Load key from environment or command-line arguments
-DEFAULT_KEY = os.getenv("OPENWEATHER_API_KEY", "")
+# Load key from environment or .env file
+def _get_key():
+    for name in ("OPENWEATHERMAP_API_KEY", "OPENWEATHER_API_KEY"):
+        val = os.getenv(name)
+        if val:
+            return val
+    env_file = os.path.join(os.path.dirname(__file__), ".env")
+    if os.path.exists(env_file):
+        with open(env_file, "r") as f:
+            for line in f:
+                line = line.strip()
+                if line.startswith("OPENWEATHERMAP_API_KEY="):
+                    return line.split("=", 1)[1].strip().strip("\"'")
+    return ""
+
+DEFAULT_KEY = _get_key()
 
 def test_openweathermap(api_key: str):
+    masked = (api_key[:4] + "..." + api_key[-4:]) if len(api_key) > 8 else "***"
     print("=" * 60)
     print("Testing against OpenWeatherMap...")
-    print(f"API Key: {api_key}")
+    print(f"API Key: {masked} (Protected)")
     print("=" * 60)
 
     url = f"https://api.openweathermap.org/data/2.5/weather?q=Dhaka&appid={api_key}&units=metric"
