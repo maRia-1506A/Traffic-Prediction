@@ -826,15 +826,10 @@ def collect_current_snapshot():
     hour_val = now.hour
     is_weekend = "Yes" if now.weekday() in [4, 5] else "No"
 
-    traffic_mode = "Live TomTom API" if TOMTOM_API_KEY else "Simulation fallback"
-    weather_mode = "Live OpenWeatherMap" if OPENWEATHERMAP_API_KEY else "Open-Meteo (Free)"
-
-    print("\n" + "=" * 115)
-    print(f"📡 [SNAPSHOT] {timestamp_str} | Traffic: {traffic_mode} | Weather: {weather_mode}")
-    print(f"📁 Target CSV: {CSV_PATH}")
-    print("=" * 115)
-    print(f"{'#':<3} | {'Route':<28} | {'Dist':<7} | {'Live Time':<10} | {'Normal':<8} | {'Delay':<8} | {'Speed':<9} | {'Level':<11} | {'Weather'}")
-    print("-" * 115)
+    traffic_mode = "Live TomTom API" if TOMTOM_API_KEY else "Simulation fallback (TOMTOM_API_KEY not set)"
+    weather_mode = "Live OpenWeatherMap API" if OPENWEATHERMAP_API_KEY else "Live Open-Meteo API (Free fallback)"
+    print(f"[Traffic] Mode: {traffic_mode}")
+    print(f"[Weather] Mode: {weather_mode}")
 
     # Load existing CSV to compute lag features if available
     if os.path.exists(CSV_PATH):
