@@ -6,7 +6,7 @@ timestamp,road_route_id,latitude,longitude,traffic_speed_kmh,travel_time_min,fre
 2026-09-23 23:45,Savar -> Dhanmondi,23.8467,90.2575,31.5,46.7,35.0,SLOW,Wednesday,23,No,Clear,32.7,0.0,Highway/Arterial,24.5,4,No,No,No,NORMAL,NORMAL,NORMAL,SLOW
 2026-09-23 23:45,Mirpur 10 -> Farmgate,23.8069,90.3687,27.7,18.4,15.0,NORMAL,Wednesday,23,No,Clear,32.7,0.0,Primary Urban,8.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
 2026-09-23 23:45,Uttara -> Mohakhali,23.8759,90.3795,34.4,24.8,22.0,NORMAL,Wednesday,23,No,Clear,32.7,0.0,Expressway/Primary,14.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-09-23 23:45,Savar -> Ashulia,23.8467,90.2575,36.7,14.7,12.0,NORMAL,Wednesday,23,No,Clear,32.7,0.0,Arterial,9.0,4,No,No,No,SLOW,SLOW,SLOW,NORMAL
+2026-09-23 23:45,Savar7 -> Ashulia,23.8467,90.2575,36.7,14.7,12.0,NORMAL,Wednesday,23,No,Clear,32.7,0.0,Arterial,9.0,4,No,No,No,SLOW,SLOW,SLOW,NORMAL
 2026-09-24 00:00,Savar -> Dhanmondi,23.8467,90.2575,41.4,35.5,35.0,NORMAL,Thursday,0,No,Cloudy,32.8,0.0,Highway/Arterial,24.5,4,No,No,No,SLOW,SLOW,SLOW,NORMAL
 2026-09-24 00:00,Mirpur 10 -> Farmgate,23.8069,90.3687,35.7,14.3,15.0,NORMAL,Thursday,0,No,Cloudy,32.8,0.0,Primary Urban,8.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
 2026-09-24 00:00,Uttara -> Mohakhali,23.8759,90.3795,37.2,22.9,22.0,NORMAL,Thursday,0,No,Cloudy,32.8,0.0,Expressway/Primary,14.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
@@ -5390,4 +5390,43 @@ timestamp,road_route_id,latitude,longitude,traffic_speed_kmh,travel_time_min,fre
 2026-10-09 19:25,Savar -> Dhanmondi,23.8467,90.2575,22.9,64.1,35.0,TRAFFIC_JAM,Friday,19,Yes,Clear,24.7,0.0,Highway/Arterial,24.5,4,No,No,No,SLOW,SLOW,NORMAL,TRAFFIC_JAM
 2026-10-09 19:25,Mirpur 10 -> Farmgate,23.8069,90.3687,22.2,23.0,15.0,SLOW,Friday,19,Yes,Clear,26.4,0.0,Primary Urban,8.5,6,No,No,No,TRAFFIC_JAM,SLOW,NORMAL,SLOW
 2026-10-09 19:25,Uttara -> Mohakhali,23.8759,90.3795,26.6,32.0,22.0,SLOW,Friday,19,Yes,Clear,24.9,0.0,Expressway/Primary,14.2,6,No,No,No,SLOW,NORMAL,NORMAL,SLOW
-2026-10-09 19:25,Savar -> Ashulia,23.8467,90.2575,29.8,18.1,12.0,SLOW,Friday,19,Yes,Clear,24.7,0.0,Arterial,9.0,4,No,No,No,SLOW,NORMAL,NORMAL,SLOW
+2026-10-09 19:25,Savar -> Ashulia,23.8467,90.2575,29.8,18.1,12.0,SLOW,Friday,19,Yes,Clear,24.7,0.0,Arterial,9.0,4,No,No,No,SLOW,NORMAL,NORMAL,SLOW2026-10-14 11:15,Savar -> Dhanmondi,23.8467,90.2575,38.7,38.0,35.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Highway/Arterial,24.5,4,No,No,No,TRAFFIC_JAM,NORMAL,SLOW,NORMAL
+2026-10-14 11:15,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Primary Urban,8.5,6,No,No,No,SLOW,NORMAL,NORMAL,NORMAL
+2026-10-14 11:15,Uttara -> Mohakhali,23.8759,90.3795,80.3,7.4,7.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Expressway/Primary,14.2,6,No,No,No,SLOW,NORMAL,NORMAL,NORMAL
+2026-10-14 11:15,Savar -> Ashulia,23.8467,90.2575,41.5,13.0,12.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Arterial,9.0,4,No,No,No,SLOW,NORMAL,SLOW,NORMAL
+2026-10-14 11:15,Savar -> Dhanmondi,23.8467,90.2575,38.0,38.7,35.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Highway/Arterial,24.5,4,No,Yes,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:15,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Primary Urban,8.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:15,Uttara -> Mohakhali,23.8759,90.3795,80.3,7.4,7.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Expressway/Primary,14.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:15,Savar -> Ashulia,23.8467,90.2575,37.8,14.3,12.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Arterial,9.0,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:16,Savar -> Dhanmondi,23.8467,90.2575,38.2,38.5,35.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Highway/Arterial,24.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:16,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Primary Urban,8.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:16,Uttara -> Mohakhali,23.8759,90.3795,80.3,7.4,7.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Expressway/Primary,14.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:16,Savar -> Ashulia,23.8467,90.2575,40.0,13.5,12.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Arterial,9.0,4,Yes,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:16,Savar -> Dhanmondi,23.8467,90.2575,38.4,38.3,35.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Highway/Arterial,24.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:16,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Primary Urban,8.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:16,Uttara -> Mohakhali,23.8759,90.3795,80.3,7.4,7.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Expressway/Primary,14.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:16,Savar -> Ashulia,23.8467,90.2575,44.3,12.2,12.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Arterial,9.0,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:17,Savar -> Dhanmondi,23.8467,90.2575,37.7,39.0,35.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Highway/Arterial,24.5,4,Yes,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:17,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Primary Urban,8.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:17,Uttara -> Mohakhali,23.8759,90.3795,80.3,7.4,7.4,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Expressway/Primary,14.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-14 11:17,Savar -> Ashulia,23.8467,90.2575,37.5,14.4,12.0,NORMAL,Wednesday,11,No,Cloudy,32.3,0.0,Arterial,9.0,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+2026-10-17 00:07,Savar -> Dhanmondi,38.1,38.6,35.0,NORMAL,Saturday,0,Yes,Cloudy (28.2C)
+2026-10-17 00:07,Mirpur 10 -> Farmgate,77.6,3.4,3.4,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:07,Mirpur 10 -> Karwan Bazar,78.0,4.0,4.0,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:07,Mirpur 12 -> Mirpur 10,80.0,2.4,2.4,NORMAL,Saturday,0,Yes,Cloudy (28.4C)
+2026-10-17 00:07,Mirpur 1 -> Gabtoli,26.5,6.8,6.0,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:07,Mirpur 1 -> Dhanmondi 27,45.0,6.4,6.4,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:07,Uttara -> Mohakhali,80.3,7.4,7.4,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:07,Uttara -> Airport,80.8,2.6,2.6,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:07,Airport -> Banani,81.0,4.0,4.0,NORMAL,Saturday,0,Yes,Cloudy (28.4C)
+2026-10-17 00:07,Savar -> Ashulia,39.7,13.6,12.0,NORMAL,Saturday,0,Yes,Cloudy (28.2C)
+2026-10-17 00:11,Savar -> Dhanmondi,41.1,35.8,35.0,NORMAL,Saturday,0,Yes,Cloudy (28.2C)
+2026-10-17 00:11,Mirpur 10 -> Farmgate,77.6,3.4,3.4,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:11,Mirpur 10 -> Karwan Bazar,78.0,4.0,4.0,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:11,Mirpur 12 -> Mirpur 10,80.0,2.4,2.4,NORMAL,Saturday,0,Yes,Cloudy (28.4C)
+2026-10-17 00:11,Mirpur 1 -> Gabtoli,29.0,6.2,6.0,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:11,Mirpur 1 -> Dhanmondi 27,45.0,6.4,6.4,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:11,Uttara -> Mohakhali,80.3,7.4,7.4,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:11,Uttara -> Airport,80.8,2.6,2.6,NORMAL,Saturday,0,Yes,Cloudy (28.3C)
+2026-10-17 00:11,Airport -> Banani,81.0,4.0,4.0,NORMAL,Saturday,0,Yes,Cloudy (28.4C)
+2026-10-17 00:11,Savar -> Ashulia,41.9,12.9,12.0,NORMAL,Saturday,0,Yes,Cloudy (28.2C)
