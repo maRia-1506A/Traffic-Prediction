@@ -5,10 +5,10 @@ Displays road segments from dhaka_roads.geojson in an
 interactive terminal table. Navigate page by page.
 
 Run:
-    python show_roads.py                     (all segments)
-    python show_roads.py --type=primary      (filter by highway type)
-    python show_roads.py --named             (only named roads)
-    python show_roads.py --search=mirpur     (search road names)
+    py -3 tools/show_roads.py                     (all segments)
+    py -3 tools/show_roads.py --type=primary      (filter by highway type)
+    py -3 tools/show_roads.py --named             (only named roads)
+    py -3 tools/show_roads.py --search=mirpur     (search road names)
 
 Controls:
     Enter / n     next page
@@ -23,7 +23,8 @@ import json
 import math
 from collections import Counter
 
-GEOJSON_PATH = os.path.join(os.path.dirname(__file__), "data", "dhaka_roads.geojson")
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+GEOJSON_PATH = os.path.join(BASE_DIR, "data", "dhaka_roads.geojson")
 PAGE_SIZE    = 25   # rows per screen
 
 # ── Load GeoJSON ──────────────────────────────────────────────────────────────

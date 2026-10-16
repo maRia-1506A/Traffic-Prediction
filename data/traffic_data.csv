@@ -1,41 +1,96 @@
-timestamp,road_route_id,latitude,longitude,traffic_speed_kmh,travel_time_min,free_flow_time_min,traffic_level,day_of_week,hour,is_weekend,weather,temperature_c,rainfall_mm,road_type,road_length_km,num_lanes,accident_incident,road_construction,special_event,prev_traffic_5min,prev_traffic_15min,prev_traffic_30min,target_traffic_level
-2026-10-14 10:10,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,8.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Mirpur 10 -> Karwan Bazar,23.8069,90.3687,78.5,3.9,3.9,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,9.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Mirpur 10 -> Agargaon,23.8069,90.3687,47.1,7.0,7.0,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,4.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Mirpur 12 -> Mirpur 10,23.826,90.365,78.5,2.6,2.6,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,3.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Mirpur 1 -> Gabtoli,23.795,90.354,10.6,17.0,6.0,TRAFFIC_JAM,Wednesday,10,No,Cloudy,31.7,0.0,Arterial,3.0,4,No,No,No,NORMAL,NORMAL,NORMAL,TRAFFIC_JAM
-2026-10-14 10:10,Mirpur 1 -> Dhanmondi 27,23.795,90.354,42.0,6.0,6.0,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Arterial,6.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Uttara -> Mohakhali,23.8759,90.3795,80.3,7.4,7.4,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Expressway/Primary,14.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Uttara -> Airport,23.8759,90.3795,78.0,2.0,2.0,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Expressway,4.5,8,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Airport -> Banani,23.851,90.4075,79.1,4.7,4.7,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Expressway,7.5,8,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Uttara -> Kuril,23.8759,90.3795,81.3,4.5,4.5,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Expressway,8.0,8,Yes,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Tongi -> Uttara,23.8885,90.402,78.5,1.3,1.3,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,4.8,6,No,N,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Kuril -> Mohakhali,23.8197,90.419,78.6,2.9,2.9,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Expressway/Primary,6.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Kuril -> Notun Bazar,23.8197,90.419,78.8,1.6,1.6,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,3.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Banani -> Gulshan 2,23.7937,90.4066,0.0,0.0,0.0,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Gulshan 2 -> Gulshan 1,23.7925,90.4162,75.0,0.8,0.8,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Gulshan 1 -> Mohakhali,23.7788,90.4172,10.5,11.4,4.0,TRAFFIC_JAM,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.0,4,No,No,No,NORMAL,NORMAL,NORMAL,TRAFFIC_JAM
-2026-10-14 10:10,Gulshan 1 -> Badda Link Road,23.7788,90.4172,77.1,0.7,0.7,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Badda -> Rampura Bridge,23.7806,90.4267,79.6,4.6,4.6,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Rampura -> Malibagh,23.7612,90.4243,0.0,0.0,0.0,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.4,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Malibagh -> Kakrail,23.7483,90.4175,70.0,0.5,0.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.0,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Farmgate -> Shahbagh,23.757,90.3888,82.5,1.6,1.6,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,3.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Karwan Bazar -> Shahbagh,23.7516,90.3934,81.8,1.1,1.1,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Shahbagh -> Motijheel,23.7383,90.3957,80.0,0.6,0.6,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,3.8,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Kakrail -> Motijheel,23.738,90.408,70.0,0.5,0.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Motijheel -> Gulistan,23.733,90.4172,80.0,0.6,0.6,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.4,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Gulistan -> Sadarghat,23.725,90.4125,58.2,3.3,3.3,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Arterial,2.6,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Sayedabad -> Motijheel,23.718,90.4285,45.4,7.4,7.4,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Jatrabari -> Sayedabad,23.7115,90.434,12.2,7.9,3.0,TRAFFIC_JAM,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,1.6,6,No,No,No,NORMAL,NORMAL,NORMAL,TRAFFIC_JAM
-2026-10-14 10:10,Postogola -> Jatrabari,23.692,90.435,31.9,4.7,4.7,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,3.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Mohammadpur -> Dhanmondi 27,23.7615,90.362,48.0,3.5,3.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.4,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Mohammadpur -> Farmgate,23.7615,90.362,46.3,3.5,3.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,4.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Asad Gate -> Farmgate,23.76,90.3725,46.3,3.5,3.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.8,6,Yes,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Dhanmondi 27 -> Science Lab,23.7533,90.3769,81.4,1.4,1.4,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.4,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Science Lab -> Shahbagh,23.7397,90.3831,30.0,0.2,0.2,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.8,4,No,Yes,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Science Lab -> New Market,23.7397,90.3831,70.0,0.5,0.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Gabtoli -> Kalyanpur,23.7845,90.3475,14.6,7.4,3.0,TRAFFIC_JAM,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,1.8,6,No,No,No,NORMAL,NORMAL,NORMAL,TRAFFIC_JAM
-2026-10-14 10:10,Kalyanpur -> Shyamoli,23.7818,90.3592,20.0,0.3,0.3,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.6,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Shyamoli -> Asad Gate,23.7717,90.3644,35.5,2.2,2.2,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Bijoy Sarani -> Mohakhali,23.765,90.3875,77.1,2.1,2.1,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
-2026-10-14 10:10,Gabtoli -> Dhanmondi 27,23.7845,90.3475,42.0,6.0,6.0,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,6.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL
+timestamp,road_route_id,latitude,longitude,traffic_speed_kmh,travel_time_min,free_flow_time_min,traffic_level,day_of_week,hour,is_weekend,weather,temperature_c,rainfall_mm,road_type,road_length_km,num_lanes,accident_incident,road_construction,special_event,prev_traffic_5min,prev_traffic_15min,prev_traffic_30min,target_traffic_level,osm_id,dest_latitude,dest_longitude,traffic_delay_min,congestion_ratio,minute,is_rush_hour,is_oneway,prev_speed_5min,target_speed_kmh
+2026-10-14 10:10,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,8.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Mirpur 10 -> Karwan Bazar,23.8069,90.3687,78.5,3.9,3.9,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,9.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Mirpur 10 -> Agargaon,23.8069,90.3687,47.1,7.0,7.0,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,4.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Mirpur 12 -> Mirpur 10,23.826,90.365,78.5,2.6,2.6,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,3.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Mirpur 1 -> Gabtoli,23.795,90.354,10.6,17.0,6.0,TRAFFIC_JAM,Wednesday,10,No,Cloudy,31.7,0.0,Arterial,3.0,4,No,No,No,NORMAL,NORMAL,NORMAL,TRAFFIC_JAM,,,,,,,,,,
+2026-10-14 10:10,Mirpur 1 -> Dhanmondi 27,23.795,90.354,42.0,6.0,6.0,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Arterial,6.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Uttara -> Mohakhali,23.8759,90.3795,80.3,7.4,7.4,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Expressway/Primary,14.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Uttara -> Airport,23.8759,90.3795,78.0,2.0,2.0,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Expressway,4.5,8,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Airport -> Banani,23.851,90.4075,79.1,4.7,4.7,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Expressway,7.5,8,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Uttara -> Kuril,23.8759,90.3795,81.3,4.5,4.5,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Expressway,8.0,8,Yes,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Tongi -> Uttara,23.8885,90.402,78.5,1.3,1.3,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,4.8,6,No,N,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Kuril -> Mohakhali,23.8197,90.419,78.6,2.9,2.9,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Expressway/Primary,6.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Kuril -> Notun Bazar,23.8197,90.419,78.8,1.6,1.6,NORMAL,Wednesday,10,No,Cloudy,31.7,0.0,Primary Urban,3.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Banani -> Gulshan 2,23.7937,90.4066,0.0,0.0,0.0,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Gulshan 2 -> Gulshan 1,23.7925,90.4162,75.0,0.8,0.8,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Gulshan 1 -> Mohakhali,23.7788,90.4172,10.5,11.4,4.0,TRAFFIC_JAM,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.0,4,No,No,No,NORMAL,NORMAL,NORMAL,TRAFFIC_JAM,,,,,,,,,,
+2026-10-14 10:10,Gulshan 1 -> Badda Link Road,23.7788,90.4172,77.1,0.7,0.7,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Badda -> Rampura Bridge,23.7806,90.4267,79.6,4.6,4.6,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Rampura -> Malibagh,23.7612,90.4243,0.0,0.0,0.0,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.4,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Malibagh -> Kakrail,23.7483,90.4175,70.0,0.5,0.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.0,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Farmgate -> Shahbagh,23.757,90.3888,82.5,1.6,1.6,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,3.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Karwan Bazar -> Shahbagh,23.7516,90.3934,81.8,1.1,1.1,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Shahbagh -> Motijheel,23.7383,90.3957,80.0,0.6,0.6,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,3.8,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Kakrail -> Motijheel,23.738,90.408,70.0,0.5,0.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Motijheel -> Gulistan,23.733,90.4172,80.0,0.6,0.6,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.4,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Gulistan -> Sadarghat,23.725,90.4125,58.2,3.3,3.3,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Arterial,2.6,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Sayedabad -> Motijheel,23.718,90.4285,45.4,7.4,7.4,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Jatrabari -> Sayedabad,23.7115,90.434,12.2,7.9,3.0,TRAFFIC_JAM,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,1.6,6,No,No,No,NORMAL,NORMAL,NORMAL,TRAFFIC_JAM,,,,,,,,,,
+2026-10-14 10:10,Postogola -> Jatrabari,23.692,90.435,31.9,4.7,4.7,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,3.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Mohammadpur -> Dhanmondi 27,23.7615,90.362,48.0,3.5,3.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.4,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Mohammadpur -> Farmgate,23.7615,90.362,46.3,3.5,3.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,4.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Asad Gate -> Farmgate,23.76,90.3725,46.3,3.5,3.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.8,6,Yes,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Dhanmondi 27 -> Science Lab,23.7533,90.3769,81.4,1.4,1.4,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.4,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Science Lab -> Shahbagh,23.7397,90.3831,30.0,0.2,0.2,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.8,4,No,Yes,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Science Lab -> New Market,23.7397,90.3831,70.0,0.5,0.5,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Gabtoli -> Kalyanpur,23.7845,90.3475,14.6,7.4,3.0,TRAFFIC_JAM,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,1.8,6,No,No,No,NORMAL,NORMAL,NORMAL,TRAFFIC_JAM,,,,,,,,,,
+2026-10-14 10:10,Kalyanpur -> Shyamoli,23.7818,90.3592,20.0,0.3,0.3,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,1.6,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Shyamoli -> Asad Gate,23.7717,90.3644,35.5,2.2,2.2,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Bijoy Sarani -> Mohakhali,23.765,90.3875,77.1,2.1,2.1,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Primary Urban,2.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-14 10:10,Gabtoli -> Dhanmondi 27,23.7845,90.3475,42.0,6.0,6.0,NORMAL,Wednesday,10,No,Cloudy,31.6,0.0,Highway/Arterial,6.5,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,,,,,,,,,,
+2026-10-17 02:26,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Saturday,2,Yes,Cloudy,27.8,0.0,Primary,8.5,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/24787810,23.757,90.3888,0.0,1.0,26.0,No,Yes,77.6,77.6
+2026-10-17 02:26,Mirpur 10 -> Karwan Bazar,23.8069,90.3687,78.5,3.9,3.9,NORMAL,Saturday,2,Yes,Cloudy,27.8,0.0,Primary,9.5,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/24787810,23.7516,90.3934,0.0,1.0,26.0,No,Yes,78.5,78.5
+2026-10-17 02:26,Mirpur 10 -> Agargaon,23.8069,90.3687,47.1,7.0,7.0,NORMAL,Saturday,2,Yes,Cloudy,27.8,0.0,Primary,4.2,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/24787810,23.7785,90.377,0.0,1.0,26.0,No,Yes,47.1,47.1
+2026-10-17 02:40,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,8.5,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/24787810,23.757,90.3888,0.0,1.0,40.0,No,Yes,77.6,77.6
+2026-10-17 02:40,Mirpur 10 -> Karwan Bazar,23.8069,90.3687,78.5,3.9,3.9,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,9.5,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/24787810,23.7516,90.3934,0.0,1.0,40.0,No,Yes,78.5,78.5
+2026-10-17 02:40,Mirpur 10 -> Farmgate,23.8069,90.3687,77.6,3.4,3.4,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,8.5,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/24787810,23.757,90.3888,0.0,1.0,40.0,No,Yes,77.6,77.6
+2026-10-17 02:40,Mirpur 10 -> Karwan Bazar,23.8069,90.3687,78.5,3.9,3.9,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,9.5,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/24787810,23.7516,90.3934,0.0,1.0,40.0,No,Yes,78.5,78.5
+2026-10-17 02:40,Mirpur 10 -> Agargaon,23.8069,90.3687,47.1,7.0,7.0,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,4.2,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/24787810,23.7785,90.377,0.0,1.0,40.0,No,Yes,47.1,47.1
+2026-10-17 02:40,Mirpur 12 -> Mirpur 10,23.826,90.365,78.5,2.6,2.6,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,3.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/610021913,23.8069,90.3687,0.0,1.0,40.0,No,Yes,78.5,78.5
+2026-10-17 02:40,Mirpur 1 -> Gabtoli,23.795,90.354,0.0,0.0,6.0,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,3.0,3,No,No,No,TRAFFIC_JAM,NORMAL,NORMAL,NORMAL,way/349876612,23.7845,90.3475,0.0,0.0,40.0,No,Yes,10.6,0.0
+2026-10-17 02:40,Mirpur 1 -> Dhanmondi 27,23.795,90.354,42.0,6.0,6.0,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,6.8,3,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/349876612,23.7533,90.3769,0.0,1.0,40.0,No,Yes,42.0,42.0
+2026-10-17 02:40,Uttara -> Mohakhali,23.8759,90.3795,80.3,7.4,7.4,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Tertiary,14.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/1095307569,23.7776,90.4054,0.0,1.0,40.0,No,Yes,80.3,80.3
+2026-10-17 02:40,Uttara -> Airport,23.8759,90.3795,78.0,2.0,2.0,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Tertiary,4.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/1095307569,23.851,90.4075,0.0,1.0,40.0,No,Yes,78.0,78.0
+2026-10-17 02:40,Airport -> Banani,23.851,90.4075,79.1,4.7,4.7,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Trunk,7.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/13858621,23.7937,90.4066,0.0,1.0,40.0,No,Yes,79.1,79.1
+2026-10-17 02:40,Uttara -> Kuril,23.8759,90.3795,81.3,4.5,4.5,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Tertiary,8.0,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/1095307569,23.8197,90.419,0.0,1.0,40.0,No,Yes,81.3,81.3
+2026-10-17 02:40,Tongi -> Uttara,23.8885,90.402,78.5,1.3,1.3,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Trunk,4.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/1094761311,23.8759,90.3795,0.0,1.0,40.0,No,Yes,78.5,78.5
+2026-10-17 02:40,Kuril -> Mohakhali,23.8197,90.419,78.6,2.9,2.9,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Expressway/Primary,6.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7776,90.4054,0.0,1.0,40.0,No,No,78.6,78.6
+2026-10-17 02:40,Kuril -> Notun Bazar,23.8197,90.419,78.8,1.6,1.6,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary Urban,3.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7975,90.424,0.0,1.0,40.0,No,No,78.8,78.8
+2026-10-17 02:40,Banani -> Gulshan 2,23.7937,90.4066,0.0,0.0,0.0,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,1.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7925,90.4162,0.0,0.0,40.0,No,No,0.0,0.0
+2026-10-17 02:40,Gulshan 2 -> Gulshan 1,23.7925,90.4162,75.0,0.8,0.8,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,1.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7788,90.4172,0.0,1.0,40.0,No,No,75.0,75.0
+2026-10-17 02:40,Gulshan 1 -> Mohakhali,23.7788,90.4172,0.0,0.0,4.0,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,2.0,4,No,No,No,TRAFFIC_JAM,NORMAL,NORMAL,NORMAL,N/A,23.7776,90.4054,0.0,0.0,40.0,No,No,10.5,0.0
+2026-10-17 02:40,Gulshan 1 -> Badda Link Road,23.7788,90.4172,77.1,0.7,0.7,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,1.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7806,90.4267,0.0,1.0,40.0,No,No,77.1,77.1
+2026-10-17 02:40,Badda -> Rampura Bridge,23.7806,90.4267,79.6,4.6,4.6,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,2.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7612,90.4243,0.0,1.0,40.0,No,No,79.6,79.6
+2026-10-17 02:40,Rampura -> Malibagh,23.7612,90.4243,0.0,0.0,0.0,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,2.4,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7483,90.4175,0.0,0.0,40.0,No,No,0.0,0.0
+2026-10-17 02:40,Malibagh -> Kakrail,23.7483,90.4175,70.0,0.5,0.5,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,2.0,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.738,90.408,0.0,1.0,40.0,No,No,70.0,70.0
+2026-10-17 02:40,Farmgate -> Shahbagh,23.757,90.3888,82.5,1.6,1.6,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Secondary,3.0,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/141821926,23.7383,90.3957,0.0,1.0,40.0,No,Yes,82.5,82.5
+2026-10-17 02:40,Karwan Bazar -> Shahbagh,23.7516,90.3934,81.8,1.1,1.1,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,2.0,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7383,90.3957,0.0,1.0,40.0,No,No,81.8,81.8
+2026-10-17 02:40,Shahbagh -> Motijheel,23.7383,90.3957,80.0,0.6,0.6,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,3.8,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.733,90.4172,0.0,1.0,40.0,No,No,80.0,80.0
+2026-10-17 02:40,Kakrail -> Motijheel,23.738,90.408,70.0,0.5,0.5,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,2.2,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.733,90.4172,0.0,1.0,40.0,No,No,70.0,70.0
+2026-10-17 02:40,Motijheel -> Gulistan,23.733,90.4172,80.0,0.6,0.6,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,1.4,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.725,90.4125,0.0,1.0,40.0,No,No,80.0,80.0
+2026-10-17 02:40,Gulistan -> Sadarghat,23.725,90.4125,58.2,3.3,3.3,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Arterial,2.6,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.705,90.414,0.0,1.0,40.0,No,No,58.2,58.2
+2026-10-17 02:40,Sayedabad -> Motijheel,23.718,90.4285,45.4,7.4,7.4,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,2.8,4,Yes,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.733,90.4172,0.0,1.0,40.0,No,No,45.4,45.4
+2026-10-17 02:40,Jatrabari -> Sayedabad,23.7115,90.434,0.0,0.0,3.0,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Highway/Arterial,1.6,6,No,No,No,TRAFFIC_JAM,NORMAL,NORMAL,NORMAL,N/A,23.718,90.4285,0.0,0.0,40.0,No,No,12.2,0.0
+2026-10-17 02:40,Postogola -> Jatrabari,23.692,90.435,31.9,4.7,4.7,NORMAL,Saturday,2,Yes,Cloudy,26.8,0.0,Highway/Arterial,3.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7115,90.434,0.0,1.0,40.0,No,No,31.9,31.9
+2026-10-17 02:40,Mohammadpur -> Dhanmondi 27,23.7615,90.362,48.0,3.5,3.5,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary Urban,2.4,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7533,90.3769,0.0,1.0,40.0,No,No,48.0,48.0
+2026-10-17 02:40,Mohammadpur -> Farmgate,23.7615,90.362,46.3,3.5,3.5,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary Urban,4.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.757,90.3888,0.0,1.0,40.0,No,No,46.3,46.3
+2026-10-17 02:40,Asad Gate -> Farmgate,23.76,90.3725,46.3,3.5,3.5,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,2.8,6,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.757,90.3888,0.0,1.0,40.0,No,No,46.3,46.3
+2026-10-17 02:40,Dhanmondi 27 -> Science Lab,23.7533,90.3769,81.4,1.4,1.4,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,2.4,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7397,90.3831,0.0,1.0,40.0,No,No,81.4,81.4
+2026-10-17 02:40,Science Lab -> Shahbagh,23.7397,90.3831,30.0,0.2,0.2,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,1.8,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7383,90.3957,0.0,1.0,40.0,No,No,30.0,30.0
+2026-10-17 02:40,Science Lab -> New Market,23.7397,90.3831,70.0,0.5,0.5,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Primary Urban,1.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,N/A,23.7335,90.3842,0.0,1.0,40.0,No,No,70.0,70.0
+2026-10-17 02:40,Gabtoli -> Kalyanpur,23.7845,90.3475,0.0,0.0,3.0,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Secondary,1.8,4,No,No,No,TRAFFIC_JAM,NORMAL,NORMAL,NORMAL,way/444032116,23.7818,90.3592,0.0,0.0,40.0,No,Yes,14.6,0.0
+2026-10-17 02:40,Kalyanpur -> Shyamoli,23.7818,90.3592,20.0,0.3,0.3,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,1.6,3,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/349876612,23.7717,90.3644,0.0,1.0,40.0,No,Yes,20.0,20.0
+2026-10-17 02:40,Shyamoli -> Asad Gate,23.7717,90.3644,35.5,2.2,2.2,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,2.2,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/566490697,23.76,90.3725,0.0,1.0,40.0,No,Yes,35.5,35.5
+2026-10-17 02:40,Bijoy Sarani -> Mohakhali,23.765,90.3875,77.1,2.1,2.1,NORMAL,Saturday,2,Yes,Cloudy,26.9,0.0,Secondary,2.5,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/141821926,23.7776,90.4054,0.0,1.0,40.0,No,Yes,77.1,77.1
+2026-10-17 02:40,Gabtoli -> Dhanmondi 27,23.7845,90.3475,42.0,6.0,6.0,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Secondary,6.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/444032116,23.7533,90.3769,0.0,1.0,40.0,No,Yes,42.0,42.0
+2026-10-17 02:40,Mirpur 12 -> ECB Chattar,23.826,90.365,20.0,0.2,0.2,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,3.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/610021913,23.8228,90.3932,0.0,1.0,40.0,No,Yes,20.0,20.0
+2026-10-17 02:40,ECB Chattar -> Mirpur 12,23.8228,90.3932,20.0,0.2,0.2,NORMAL,Saturday,2,Yes,Cloudy,27.1,0.0,Primary,3.5,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/284476598,23.826,90.365,0.0,1.0,40.0,No,Yes,20.0,20.0
+2026-10-17 02:40,Mirpur 10 -> ECB Chattar,23.8069,90.3687,80.0,2.4,2.4,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Primary,4.8,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/24787810,23.8228,90.3932,0.0,1.0,40.0,No,Yes,80.0,80.0
+2026-10-17 02:40,ECB Chattar -> Kuril,23.8228,90.3932,20.0,0.2,0.2,NORMAL,Saturday,2,Yes,Cloudy,27.1,0.0,Primary,3.2,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/284476598,23.8197,90.419,0.0,1.0,40.0,No,Yes,20.0,20.0
+2026-10-17 02:40,ECB Chattar -> Airport,23.8228,90.3932,80.0,2.4,2.4,NORMAL,Saturday,2,Yes,Cloudy,27.1,0.0,Primary,4.2,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/284476598,23.851,90.4075,0.0,1.0,40.0,No,Yes,80.0,80.0
+2026-10-17 02:40,ECB Chattar -> Banani,23.8228,90.3932,80.9,2.3,2.3,NORMAL,Saturday,2,Yes,Cloudy,27.1,0.0,Primary,3.8,2,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/284476598,23.7937,90.4066,0.0,1.0,40.0,No,Yes,80.9,80.9
+2026-10-17 02:40,Savar -> Gabtoli,23.8467,90.2575,38.9,23.9,22.0,NORMAL,Saturday,2,Yes,Cloudy,26.8,0.0,Trunk,15.5,3,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/956288927,23.7845,90.3475,1.9,1.09,40.0,No,Yes,38.9,38.9
+2026-10-17 02:40,Gabtoli -> Savar,23.7845,90.3475,41.9,22.2,22.0,NORMAL,Saturday,2,Yes,Cloudy,27.0,0.0,Secondary,15.5,4,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/444032116,23.8467,90.2575,0.2,1.01,40.0,No,Yes,41.9,41.9
+2026-10-17 02:40,Savar -> Dhanmondi,23.8467,90.2575,41.8,35.2,35.0,NORMAL,Saturday,2,Yes,Cloudy,26.8,0.0,Trunk,24.5,3,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/956288927,23.7533,90.3769,0.2,1.01,40.0,No,Yes,41.8,41.8
+2026-10-17 02:40,Savar -> Ashulia,23.8467,90.2575,39.7,13.6,12.0,NORMAL,Saturday,2,Yes,Cloudy,26.8,0.0,Trunk,9.0,3,No,No,No,NORMAL,NORMAL,NORMAL,NORMAL,way/956288927,23.895,90.315,1.6,1.13,40.0,No,Yes,39.7,39.7
