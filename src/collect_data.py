@@ -222,9 +222,17 @@ OPENWEATHERMAP_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "")
 OSM_NETWORK = OSMRoadNetwork(GEOJSON_PATH)
 
 # ---------------------------------------------------------
-# 1. Route Configuration & Infrastructure Metadata
+# 1. Route Configuration (Official Project Corridors R01 to R45)
 # ---------------------------------------------------------
-ROUTES = [
+try:
+    from src.routes_config import PROJECT_ROUTES
+except ImportError:
+    try:
+        from routes_config import PROJECT_ROUTES
+    except ImportError:
+        PROJECT_ROUTES = []
+
+FALLBACK_ROUTES = [
     # --- 1. Mirpur Corridors ---
     {
         "route_id": "Mirpur 10 -> Farmgate",
@@ -792,6 +800,9 @@ ROUTES = [
     }
 ]
 
+# Active Project Corridors (Official 45 routes: R01 to R45)
+ROUTES = PROJECT_ROUTES if PROJECT_ROUTES else FALLBACK_ROUTES
+
 # ---------------------------------------------------------
 # 2. Weather Fetcher (OpenWeatherMap API with Open-Meteo Fallback)
 # ---------------------------------------------------------
@@ -921,7 +932,7 @@ def get_live_traffic(route: dict, now: datetime.datetime, weather: dict, key_poo
             if not api_key:
                 break
             try:
-                locations = f"{orig_lat},{orig_lon}:{dest_lat},{dest_lon}"
+                locations = route.get("tomtom_locations") or f"{orig_lat},{orig_lon}:{dest_lat},{dest_lon}"
                 url = f"https://api.tomtom.com/routing/1/calculateRoute/{locations}/json"
                 params = {
                     "key": api_key,

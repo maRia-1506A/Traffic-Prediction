@@ -23,7 +23,11 @@ try:
 except ImportError:
     pass
 
-env_file = os.path.join(os.path.dirname(__file__), "..", ".env")
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+env_file = os.path.join(BASE_DIR, ".env")
 if os.path.exists(env_file):
     with open(env_file, "r") as f:
         for line in f:
@@ -32,11 +36,10 @@ if os.path.exists(env_file):
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
 
-# Import Key Pool and OSM Network from collect_data
+# Import Key Pool, OSM Network and Official Routes
 try:
     from src.collect_data import KEY_POOL, OSM_NETWORK, ROUTES, get_live_weather
 except ImportError:
-    sys.path.append(os.path.dirname(__file__))
     from collect_data import KEY_POOL, OSM_NETWORK, ROUTES, get_live_weather
 
 # Known Dhaka Strategic Bypass Points & Flyovers (from OSM Road Network)
@@ -262,13 +265,19 @@ def main():
     parser.add_argument("--threshold", type=float, default=3.0, help="Traffic delay threshold in minutes to trigger alternatives (default: 3.0)")
     args = parser.parse_args()
 
-    # Predefined route lookup
+    # Predefined route lookup (matches R01..R45, name, or path)
     if args.route:
-        matched = [r for r in ROUTES if args.route.lower() in r["route_id"].lower()]
+        q = args.route.strip().lower()
+        matched = [
+            r for r in ROUTES 
+            if q == r.get("route_code", "").lower()
+            or q in r["route_id"].lower()
+            or q in r.get("route_path", "").lower()
+        ]
         if not matched:
-            print(f"Route '{args.route}' not found in standard routes. Available routes:")
+            print(f"Route '{args.route}' not found in project routes. Sample available routes:")
             for r in ROUTES[:10]:
-                print(f"  - {r['route_id']}")
+                print(f"  - {r.get('route_code', '')}: {r.get('route_path', r['route_id'])}")
             return
         target_route = matched[0]
         report = find_alternative_routes(
