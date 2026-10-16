@@ -1,11 +1,14 @@
 """
 Traffic Data Collector
-Fetches real-time traffic and weather data, computes lag features,
-and appends structured records to data/traffic_data.csv.
+Fetches real-time traffic (TomTom API Key Pool) and road topology (OpenStreetMap Overpass),
+computes dynamic congestion & lag features, and appends structured records for ML training.
 """
 
 import os
+import sys
 import time
+import math
+import json
 import datetime
 import requests
 import pandas as pd
@@ -29,18 +32,194 @@ if os.path.exists(env_file):
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
 
-# Output CSV Path
+# Output Paths
 DATA_DIR = os.path.join(os.path.dirname(__file__), "..", "data")
 CSV_PATH = os.path.join(DATA_DIR, "traffic_data.csv")
+GEOJSON_PATH = os.path.join(DATA_DIR, "dhaka_roads.geojson")
 
 # ---------------------------------------------------------
-# API Keys (Loaded from environment variables, .env, or default)
+# TomTom Multi-Key Pool Manager
 # ---------------------------------------------------------
-# TomTom Routing & Traffic API Key (https://developer.tomtom.com/)
-TOMTOM_API_KEY = os.getenv("TOMTOM_API_KEY", "8UZzFrQGghTWeQneU0xK2MpgL26ZOsyh")
+class TomTomKeyPool:
+    """
+    Manages a pool of TomTom API keys with:
+    - Round-robin load balancing
+    - Automatic failover if a key hits rate limit (429) or quota limit (403)
+    - Cooldown tracking and live key usage statistics
+    """
+    def __init__(self, raw_keys_str: str = ""):
+        self.keys = []
+        for k in raw_keys_str.replace(";", ",").replace("\n", ",").split(","):
+            k = k.strip().strip("\"'")
+            if k and k not in self.keys:
+                self.keys.append(k)
 
-# OpenWeatherMap API Key (https://openweathermap.org/api)
+        self.current_idx = 0
+        self.cooldowns = {}  # key -> expiry_timestamp
+        self.stats = {k: {"calls": 0, "success": 0, "429": 0, "403": 0, "errors": 0} for k in self.keys}
+
+    @property
+    def total_keys(self) -> int:
+        return len(self.keys)
+
+    @property
+    def total_daily_capacity(self) -> int:
+        return len(self.keys) * 2500
+
+    def get_next_key(self):
+        if not self.keys:
+            return None
+        now = time.time()
+        # Find next available key not in cooldown
+        for _ in range(len(self.keys)):
+            key = self.keys[self.current_idx]
+            self.current_idx = (self.current_idx + 1) % len(self.keys)
+            if now >= self.cooldowns.get(key, 0):
+                return key
+        # If all in cooldown, return the one whose cooldown expires earliest
+        return min(self.keys, key=lambda k: self.cooldowns.get(k, 0))
+
+    def record_result(self, key: str, status_code: int):
+        if key not in self.stats:
+            return
+        self.stats[key]["calls"] += 1
+        now = time.time()
+        if status_code == 200:
+            self.stats[key]["success"] += 1
+            self.cooldowns.pop(key, None)
+        elif status_code == 429:
+            self.stats[key]["429"] += 1
+            self.cooldowns[key] = now + 60  # Cooldown 1 minute
+            print(f"  [TomTom Pool] Key {self._mask(key)} hit rate limit (429). Rotating & pausing key for 60s.")
+        elif status_code == 403:
+            self.stats[key]["403"] += 1
+            self.cooldowns[key] = now + 3600  # Cooldown 1 hour
+            print(f"  [TomTom Pool] Key {self._mask(key)} quota exceeded/forbidden (403). Rotating.")
+        else:
+            self.stats[key]["errors"] += 1
+
+    def mask(self, key: str) -> str:
+        return self._mask(key)
+
+    def _mask(self, key: str) -> str:
+        if not key:
+            return "None"
+        if len(key) <= 8:
+            return "***"
+        return f"{key[:4]}...{key[-4:]}"
+
+
+# ---------------------------------------------------------
+# OpenStreetMap Road Network Integration
+# ---------------------------------------------------------
+class OSMRoadNetwork:
+    """
+    Interfaces with OpenStreetMap data (dhaka_roads.geojson fetched via Overpass API)
+    to bind real road infrastructure metadata:
+      - OSM Way ID (@id)
+      - Road Class (motorway, trunk, primary, secondary, tertiary)
+      - Real Lane Count (lanes)
+      - Directionality (oneway)
+      - Precise segment length (Haversine)
+    """
+    def __init__(self, geojson_path: str = GEOJSON_PATH):
+        self.geojson_path = geojson_path
+        self.features = []
+        self._load()
+
+    def _load(self):
+        if os.path.exists(self.geojson_path):
+            try:
+                with open(self.geojson_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                self.features = data.get("features", [])
+            except Exception as e:
+                print(f"[OSM Warning] Could not parse GeoJSON {self.geojson_path}: {e}")
+                self.features = []
+
+    @staticmethod
+    def haversine(c1, c2):
+        lat1, lon1, lat2, lon2 = c1[0], c1[1], c2[0], c2[1]
+        R = 6371.0
+        dlat = math.radians(lat2 - lat1)
+        dlon = math.radians(lon2 - lon1)
+        a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
+        return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+
+    def find_nearest_osm_way(self, lat: float, lon: float, max_dist_km: float = 1.0) -> dict:
+        """Finds nearest OSM way and returns its physical infrastructure attributes."""
+        if not self.features:
+            return {}
+        best_feat = None
+        min_dist = float("inf")
+        target = (lat, lon)
+        for feat in self.features:
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            for c in coords:
+                # GeoJSON coordinates are [lon, lat]
+                dist = self.haversine(target, (c[1], c[0]))
+                if dist < min_dist:
+                    min_dist = dist
+                    best_feat = feat
+        if min_dist <= max_dist_km and best_feat:
+            props = best_feat.get("properties", {})
+            return {
+                "osm_id": props.get("@id", best_feat.get("id", "N/A")),
+                "osm_highway": props.get("highway", "primary"),
+                "osm_lanes": int(props.get("lanes", 4)) if str(props.get("lanes", "")).isdigit() else 4,
+                "osm_oneway": 1 if props.get("oneway") == "yes" else 0,
+                "osm_name": props.get("name:en") or props.get("name") or "",
+                "match_dist_m": round(min_dist * 1000, 1)
+            }
+        return {}
+
+    def extract_osm_segments(self, limit: int = 50, min_length_km: float = 0.4) -> list:
+        """Extracts major arterial road segments directly from the OSM road graph."""
+        valid_types = {"motorway", "trunk", "primary", "secondary", "tertiary"}
+        segments = []
+        for feat in self.features:
+            props = feat.get("properties", {})
+            hw = props.get("highway", "")
+            if hw not in valid_types:
+                continue
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            if len(coords) < 2:
+                continue
+            seg_len = sum(self.haversine((coords[i][1], coords[i][0]), (coords[i+1][1], coords[i+1][0])) for i in range(len(coords) - 1))
+            if seg_len < min_length_km:
+                continue
+
+            name = props.get("name:en") or props.get("name") or f"OSM {hw.title()} Road"
+            osm_id = props.get("@id", feat.get("id", "N/A"))
+            lanes = int(props.get("lanes", 4)) if str(props.get("lanes", "")).isdigit() else (6 if hw in ["motorway", "trunk"] else 4)
+            free_flow = max(1.5, round((seg_len / 45.0) * 60, 1))
+
+            segments.append({
+                "route_id": f"OSM:{osm_id}:{name[:20]}",
+                "osm_id": osm_id,
+                "origin_name": f"{name} (Start)",
+                "origin_coords": (round(coords[0][1], 6), round(coords[0][0], 6)),
+                "dest_name": f"{name} (End)",
+                "dest_coords": (round(coords[-1][1], 6), round(coords[-1][0], 6)),
+                "road_type": hw.title(),
+                "road_length_km": round(seg_len, 2),
+                "num_lanes": lanes,
+                "is_oneway": 1 if props.get("oneway") == "yes" else 0,
+                "free_flow_time_min": free_flow
+            })
+            if len(segments) >= limit:
+                break
+        return segments
+
+
+# ---------------------------------------------------------
+# API Keys & Component Instances
+# ---------------------------------------------------------
+raw_tomtom_keys = os.getenv("TOMTOM_API_KEYS", "") or os.getenv("TOMTOM_API_KEY", "8UZzFrQGghTWeQneU0xK2MpgL26ZOsyh")
+KEY_POOL = TomTomKeyPool(raw_tomtom_keys)
+
 OPENWEATHERMAP_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "")
+OSM_NETWORK = OSMRoadNetwork(GEOJSON_PATH)
 
 # ---------------------------------------------------------
 # 1. Route Configuration & Infrastructure Metadata
@@ -721,53 +900,67 @@ def get_live_weather(lat: float, lon: float):
     return default_res
 
 # ---------------------------------------------------------
-# 3. Traffic Data Fetcher (TomTom Routing & Traffic API)
+# 3. Traffic Data Fetcher (TomTom Routing & Traffic API with Key Pool)
 # ---------------------------------------------------------
-def get_live_traffic(route: dict, now: datetime.datetime, weather: dict):
+def get_live_traffic(route: dict, now: datetime.datetime, weather: dict, key_pool: TomTomKeyPool = KEY_POOL):
     """
     Fetches live traffic travel time and delay using TomTom Routing & Traffic API,
-    falling back to calibrated simulation if key is not configured or unavailable.
+    cycling through the multi-key pool with automatic failover on rate limits.
+    Falls back to calibrated simulation if all keys fail or are unavailable.
     """
     orig_lat, orig_lon = route["origin_coords"]
     dest_lat, dest_lon = route["dest_coords"]
-    free_flow = route["free_flow_time_min"]
-    road_len = route["road_length_km"]
+    free_flow = route.get("free_flow_time_min", 10.0)
+    road_len = route.get("road_length_km", 5.0)
 
-    # Try TomTom Routing & Traffic API if key is supplied
-    if TOMTOM_API_KEY:
-        try:
-            locations = f"{orig_lat},{orig_lon}:{dest_lat},{dest_lon}"
-            url = f"https://api.tomtom.com/routing/1/calculateRoute/{locations}/json"
-            params = {
-                "key": TOMTOM_API_KEY,
-                "traffic": "true",
-                "travelMode": "car",
-                "computeTravelTimeFor": "all"
-            }
-            res = requests.get(url, params=params, timeout=7)
-            if res.status_code == 200:
-                data = res.json()
-                if "routes" in data and len(data["routes"]) > 0:
-                    summary = data["routes"][0].get("summary", {})
-                    travel_time_sec = summary.get("travelTimeInSeconds")
-                    if travel_time_sec:
-                        no_traffic_sec = summary.get("noTrafficTravelTimeInSeconds")
-                        if not no_traffic_sec:
+    # Try TomTom API with key pool if keys exist
+    if key_pool and key_pool.total_keys > 0:
+        max_attempts = min(key_pool.total_keys, 3)
+        for attempt in range(max_attempts):
+            api_key = key_pool.get_next_key()
+            if not api_key:
+                break
+            try:
+                locations = f"{orig_lat},{orig_lon}:{dest_lat},{dest_lon}"
+                url = f"https://api.tomtom.com/routing/1/calculateRoute/{locations}/json"
+                params = {
+                    "key": api_key,
+                    "traffic": "true",
+                    "travelMode": "car",
+                    "computeTravelTimeFor": "all"
+                }
+                res = requests.get(url, params=params, timeout=7)
+                key_pool.record_result(api_key, res.status_code)
+
+                if res.status_code == 200:
+                    data = res.json()
+                    if "routes" in data and len(data["routes"]) > 0:
+                        summary = data["routes"][0].get("summary", {})
+                        travel_time_sec = summary.get("travelTimeInSeconds")
+                        if travel_time_sec is not None:
                             traffic_delay_sec = summary.get("trafficDelayInSeconds", 0)
-                            no_traffic_sec = max(travel_time_sec - traffic_delay_sec, free_flow * 60)
+                            no_traffic_sec = summary.get("noTrafficTravelTimeInSeconds")
+                            if not no_traffic_sec:
+                                no_traffic_sec = max(travel_time_sec - traffic_delay_sec, free_flow * 60)
 
-                        travel_time_min = round(travel_time_sec / 60.0, 1)
-                        free_flow_time_min = round(no_traffic_sec / 60.0, 1)
-                        distance_km = round(summary.get("lengthInMeters", road_len * 1000) / 1000.0, 1)
-                        speed_kmh = round(distance_km / max(travel_time_min / 60.0, 0.01), 1)
+                            travel_time_min = round(travel_time_sec / 60.0, 1)
+                            free_flow_time_min = round(no_traffic_sec / 60.0, 1)
+                            traffic_delay_min = round(traffic_delay_sec / 60.0, 1)
+                            distance_km = round(summary.get("lengthInMeters", road_len * 1000) / 1000.0, 1)
+                            speed_kmh = round(distance_km / max(travel_time_min / 60.0, 0.01), 1)
 
-                        ratio = travel_time_min / max(free_flow_time_min, 1)
-                        traffic_level = "NORMAL" if ratio < 1.25 else ("SLOW" if ratio < 1.75 else "TRAFFIC_JAM")
-                        return travel_time_min, free_flow_time_min, speed_kmh, traffic_level
-            else:
-                print(f"[Warning] TomTom API returned status {res.status_code}. Using simulation fallback.")
-        except Exception as e:
-            print(f"[Warning] TomTom API error: {e}. Using simulation fallback.")
+                            ratio = travel_time_min / max(free_flow_time_min, 0.1)
+                            traffic_level = "NORMAL" if ratio < 1.25 else ("SLOW" if ratio < 1.75 else "TRAFFIC_JAM")
+                            return travel_time_min, free_flow_time_min, speed_kmh, traffic_level, traffic_delay_min, key_pool.mask(api_key)
+                elif res.status_code in [429, 403]:
+                    # Rate limit or quota exhausted — automatically retry with next key in pool
+                    continue
+                else:
+                    # Non-retryable error
+                    break
+            except Exception as e:
+                key_pool.record_result(api_key, 0)
+                continue
 
     # Calibrated Simulation Model (Dhaka Rush Hour + Weather Effects)
     hour = now.hour + (now.minute / 60.0)
@@ -800,9 +993,10 @@ def get_live_traffic(route: dict, now: datetime.datetime, weather: dict):
 
     total_multiplier = rush_factor * weather_factor
     travel_time_min = round(free_flow * total_multiplier, 1)
-    speed_kmh = round(road_len / (travel_time_min / 60.0), 1)
+    speed_kmh = round(road_len / max(travel_time_min / 60.0, 0.01), 1)
+    traffic_delay_min = max(0.0, round(travel_time_min - free_flow, 1))
 
-    ratio = travel_time_min / free_flow
+    ratio = travel_time_min / max(free_flow, 0.1)
     if ratio < 1.3:
         traffic_level = "NORMAL"
     elif ratio < 1.8:
@@ -810,132 +1004,211 @@ def get_live_traffic(route: dict, now: datetime.datetime, weather: dict):
     else:
         traffic_level = "TRAFFIC_JAM"
 
-    return travel_time_min, free_flow, speed_kmh, traffic_level
+    return travel_time_min, free_flow, speed_kmh, traffic_level, traffic_delay_min, "Simulation"
+
 
 # ---------------------------------------------------------
 # 4. Main Collection & Feature Builder
 # ---------------------------------------------------------
-def collect_current_snapshot():
+def collect_current_snapshot(source: str = "corridors", limit: int = 50):
     """
-    Collects a single snapshot for all configured routes with full feature schema.
-    Logs live route metrics cleanly to the terminal and appends immediately to CSV.
+    Collects a single snapshot combining OpenStreetMap road topology and
+    TomTom live traffic across the key pool. Appends structured records to CSV.
     """
     now = datetime.datetime.now()
     timestamp_str = now.strftime("%Y-%m-%d %H:%M")
     day_name = now.strftime("%A")
     hour_val = now.hour
+    minute_val = now.minute
     is_weekend = "Yes" if now.weekday() in [4, 5] else "No"
 
-    traffic_mode = "Live TomTom API" if TOMTOM_API_KEY else "Simulation fallback (TOMTOM_API_KEY not set)"
-    weather_mode = "Live OpenWeatherMap API" if OPENWEATHERMAP_API_KEY else "Live Open-Meteo API (Free fallback)"
-    print(f"[Traffic] Mode: {traffic_mode}")
-    print(f"[Weather] Mode: {weather_mode}")
+    # Rush hour indicator
+    hour_float = hour_val + minute_val / 60.0
+    is_rush = "Yes" if (((8.0 <= hour_float <= 10.5) or (17.0 <= hour_float <= 21.0)) and is_weekend == "No") else "No"
+
+    pool_capacity = KEY_POOL.total_daily_capacity
+    print("\n" + "=" * 120)
+    print(f"  Dhaka Traffic & OSM Collector | Snapshot Time: {timestamp_str}")
+    print(f"  TomTom Key Pool: {KEY_POOL.total_keys} Key(s) Loaded ({pool_capacity:,} calls/day capacity)")
+    print(f"  OSM GeoJSON: {len(OSM_NETWORK.features)} Road Features Loaded | Mode: {source.upper()}")
+    print("=" * 120)
+
+    # Resolve target route list
+    if source == "osm":
+        active_routes = OSM_NETWORK.extract_osm_segments(limit=limit)
+        if not active_routes:
+            print("[Warning] No OSM road segments extracted. Falling back to predefined corridors.")
+            active_routes = ROUTES[:limit]
+    else:
+        active_routes = ROUTES[:limit]
 
     # Load existing CSV to compute lag features if available
+    df_existing = pd.DataFrame()
     if os.path.exists(CSV_PATH):
         try:
             df_existing = pd.read_csv(CSV_PATH)
         except Exception:
             df_existing = pd.DataFrame()
-    else:
-        df_existing = pd.DataFrame()
 
     new_rows = []
 
-    for idx, route in enumerate(ROUTES, 1):
-        orig_lat, orig_lon = route["origin_coords"]
-        weather = get_live_weather(orig_lat, orig_lon)
-        travel_time, free_flow, speed, level = get_live_traffic(route, now, weather)
+    print(f"{'#':<3} | {'Route / OSM Segment':<32} | {'OSM Way ID':<13} | {'Len':<5} | {'Live Time':<9} | {'Delay':<8} | {'Speed':<9} | {'Traffic Level':<12} | {'Key Used'}")
+    print("-" * 120)
 
-        # Retrieve lag features from historical buffer
+    for idx, route in enumerate(active_routes, 1):
+        orig_lat, orig_lon = route["origin_coords"]
+        dest_lat, dest_lon = route.get("dest_coords", (orig_lat, orig_lon))
+
+        # Look up / bind OpenStreetMap physical tags
+        osm_id = route.get("osm_id")
+        osm_road_type = route.get("road_type")
+        osm_lanes = route.get("num_lanes")
+        osm_oneway = route.get("is_oneway")
+
+        if not osm_id:
+            osm_match = OSM_NETWORK.find_nearest_osm_way(orig_lat, orig_lon)
+            if osm_match:
+                osm_id = osm_match["osm_id"]
+                osm_road_type = osm_match["osm_highway"].title()
+                osm_lanes = osm_match["osm_lanes"]
+                osm_oneway = osm_match["osm_oneway"]
+            else:
+                osm_id = "N/A"
+                osm_road_type = route.get("road_type", "Primary Urban")
+                osm_lanes = route.get("num_lanes", 4)
+                osm_oneway = 0
+
+        weather = get_live_weather(orig_lat, orig_lon)
+        travel_time, free_flow, speed, level, delay_min, key_label = get_live_traffic(route, now, weather, KEY_POOL)
+
+        # Retrieve lag features from historical records
         prev_5m = "NORMAL"
         prev_15m = "NORMAL"
         prev_30m = "NORMAL"
+        prev_speed = speed
 
         if not df_existing.empty and "road_route_id" in df_existing.columns:
             route_history = df_existing[df_existing["road_route_id"] == route["route_id"]]
             if len(route_history) >= 1:
                 prev_5m = route_history.iloc[-1].get("traffic_level", "NORMAL")
+                prev_speed = route_history.iloc[-1].get("traffic_speed_kmh", speed)
             if len(route_history) >= 3:
                 prev_15m = route_history.iloc[-3].get("traffic_level", "NORMAL")
             if len(route_history) >= 6:
                 prev_30m = route_history.iloc[-6].get("traffic_level", "NORMAL")
 
-        # Random incident simulation (low probability)
+        # Incident simulation (low probability)
         has_accident = "Yes" if np.random.rand() < 0.03 else "No"
         has_construction = "Yes" if np.random.rand() < 0.05 else "No"
         has_event = "No"
 
+        congestion_ratio = round(travel_time / max(free_flow, 0.1), 2)
+
         row = {
             "timestamp": timestamp_str,
             "road_route_id": route["route_id"],
+            "osm_id": osm_id,
             "latitude": orig_lat,
             "longitude": orig_lon,
+            "dest_latitude": dest_lat,
+            "dest_longitude": dest_lon,
             "traffic_speed_kmh": speed,
             "travel_time_min": travel_time,
             "free_flow_time_min": free_flow,
+            "traffic_delay_min": delay_min,
+            "congestion_ratio": congestion_ratio,
             "traffic_level": level,
             "day_of_week": day_name,
             "hour": hour_val,
+            "minute": minute_val,
             "is_weekend": is_weekend,
+            "is_rush_hour": is_rush,
             "weather": weather["weather"],
             "temperature_c": weather["temperature_c"],
             "rainfall_mm": weather["rainfall_mm"],
-            "road_type": route["road_type"],
-            "road_length_km": route["road_length_km"],
-            "num_lanes": route["num_lanes"],
+            "road_type": osm_road_type,
+            "road_length_km": route.get("road_length_km", 5.0),
+            "num_lanes": osm_lanes,
+            "is_oneway": "Yes" if osm_oneway == 1 else "No",
             "accident_incident": has_accident,
             "road_construction": has_construction,
             "special_event": has_event,
             "prev_traffic_5min": prev_5m,
             "prev_traffic_15min": prev_15m,
             "prev_traffic_30min": prev_30m,
-            "target_traffic_level": level
+            "prev_speed_5min": prev_speed,
+            "target_traffic_level": level,
+            "target_speed_kmh": speed
         }
         new_rows.append(row)
 
-        delay_min = max(0.0, round(travel_time - free_flow, 1))
-        weather_str = f"{weather['weather']} ({weather['temperature_c']}°C)"
-        delay_display = f"+{delay_min:.1f} m" if delay_min > 0 else "0.0 m"
-        print(f"{idx:<3} | {route['route_id']:<28} | {route['road_length_km']:<4.1f} km | {travel_time:<5.1f} min | {free_flow:<4.1f} min | {delay_display:<8} | {speed:<5.1f}km/h | {level:<11} | {weather_str}")
+        delay_display = f"+{delay_min:.1f}m" if delay_min > 0 else "0.0m"
+        r_name = route["route_id"][:30]
+        print(f"{idx:<3} | {r_name:<32} | {osm_id:<13} | {route.get('road_length_km', 0):<4.1f}k | {travel_time:<5.1f}min | {delay_display:<8} | {speed:<5.1f}km/h | {level:<12} | {key_label}")
 
     df_new = pd.DataFrame(new_rows)
-
     os.makedirs(DATA_DIR, exist_ok=True)
+
     if os.path.exists(CSV_PATH) and os.path.getsize(CSV_PATH) > 0:
-        df_new.to_csv(CSV_PATH, mode="a", header=False, index=False)
+        try:
+            df_old = pd.read_csv(CSV_PATH)
+            df_combined = pd.concat([df_old, df_new], ignore_index=True)
+            df_combined.to_csv(CSV_PATH, index=False)
+        except Exception:
+            df_new.to_csv(CSV_PATH, mode="a", header=False, index=False)
     else:
         df_new.to_csv(CSV_PATH, mode="w", header=True, index=False)
 
-    print("-" * 115)
+    print("-" * 120)
     counts = df_new['traffic_level'].value_counts().to_dict()
-    print(f"✅ Appended {len(new_rows)} route records -> {CSV_PATH}")
-    print(f"📊 Summary: {counts.get('NORMAL', 0)} Normal | {counts.get('SLOW', 0)} Slow | {counts.get('TRAFFIC_JAM', 0)} Jam")
-    print("=" * 115 + "\n")
+    print(f"SUCCESS: Appended {len(new_rows)} structured records -> {CSV_PATH}")
+    print(f"Summary: {counts.get('NORMAL', 0)} Normal | {counts.get('SLOW', 0)} Slow | {counts.get('TRAFFIC_JAM', 0)} Jam")
+    print("=" * 120 + "\n")
+
+
+def print_key_stats():
+    """Prints current TomTom key pool stats and health."""
+    print("=" * 65)
+    print("TomTom API Key Pool Status")
+    print("=" * 65)
+    for idx, (k, stats) in enumerate(KEY_POOL.stats.items(), 1):
+        masked = KEY_POOL.mask(k)
+        print(f"Key #{idx} ({masked}): {stats['calls']} calls, {stats['success']} ok, {stats['429']} rate-limits, {stats['403']} quota-limits")
+    print(f"Total theoretical capacity: {KEY_POOL.total_daily_capacity:,} req/day")
+    print("=" * 65)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Dhaka Traffic & Weather Real-Time Collector")
-    parser.add_argument("--loop", action="store_true", help="Run continuous loop (optional)")
-    parser.add_argument("--interval", type=int, default=10, help="Interval in minutes if --loop is specified")
+    parser = argparse.ArgumentParser(description="Dhaka Traffic & OSM Real-Time Collector")
+    parser.add_argument("--loop", action="store_true", help="Run continuous collection loop")
+    parser.add_argument("--interval", type=int, default=10, help="Interval in minutes if --loop is specified (default: 10)")
+    parser.add_argument("--source", type=str, default="corridors", choices=["corridors", "osm"], help="Data source: 'corridors' (50 commuter routes) or 'osm' (direct OSM road segments)")
+    parser.add_argument("--limit", type=int, default=50, help="Number of routes/segments to sample per snapshot (default: 50)")
+    parser.add_argument("--keys-status", action="store_true", help="Print key pool status and exit")
     args = parser.parse_args()
 
+    if args.keys_status:
+        print_key_stats()
+        return
+
     if args.loop:
-        print("=" * 70)
-        print("  Dhaka Real-Time Traffic Collector (Continuous Mode)")
+        print("=" * 75)
+        print("  Dhaka Real-Time Traffic Collector (Continuous Loop Active)")
         print(f"  Target File: {CSV_PATH}")
         print(f"  Interval: Every {args.interval} minutes")
+        print(f"  Source Mode: {args.source.upper()} (Sampling {args.limit} routes)")
+        print(f"  Keys in Pool: {KEY_POOL.total_keys} ({KEY_POOL.total_daily_capacity:,} req/day)")
         print("  Press Ctrl+C at any time to exit.")
-        print("=" * 70)
+        print("=" * 75)
         try:
             while True:
-                collect_current_snapshot()
+                collect_current_snapshot(source=args.source, limit=args.limit)
                 time.sleep(args.interval * 60)
         except KeyboardInterrupt:
-            print("\n🛑 Stopped by user.")
+            print("\nStopped by user.")
     else:
-        # Default: Purely manual one-shot collection
-        collect_current_snapshot()
+        # Default: Purely manual one-shot snapshot
+        collect_current_snapshot(source=args.source, limit=args.limit)
 
 
 if __name__ == "__main__":
