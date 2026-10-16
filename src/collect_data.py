@@ -278,8 +278,8 @@ def collect_current_snapshot():
 
     traffic_mode = "Live TomTom API" if TOMTOM_API_KEY else "Simulation fallback (TOMTOM_API_KEY not set)"
     weather_mode = "Live OpenWeatherMap API" if OPENWEATHERMAP_API_KEY else "Live Open-Meteo API (Free fallback)"
-    print(f"🚦 Traffic Mode: {traffic_mode}")
-    print(f"🌤️  Weather Mode: {weather_mode}")
+    print(f"[Traffic] Mode: {traffic_mode}")
+    print(f"[Weather] Mode: {weather_mode}")
 
     # Load existing CSV to compute lag features if available
     if os.path.exists(CSV_PATH):

@@ -24,19 +24,79 @@ OUTPUT_PATH = os.path.join(DATA_DIR, "dhaka_roads.geojson")
 # Area Bounding Boxes  [south, west, north, east]
 # ─────────────────────────────────────────────
 AREAS = {
+    # ── Already collected (will be skipped on re-run) ──────────────────────
     "Mirpur": {
         "bbox": (23.7649, 90.3308, 23.8370, 90.3934),
-        "description": "Mirpur 1-14, Pallabi, Kazipara, Agargaon"
+        "description": "Mirpur 1-14, Pallabi, Kazipara, Agargaon, Gabtoli, ECB Chattar"
     },
     "Uttara": {
         "bbox": (23.8530, 90.3550, 23.9100, 90.4350),
-        "description": "Uttara Sector 1-18, Diabari, Turag, Abdullahpur"
+        "description": "Uttara Sector 1-18, Diabari, Turag, Abdullahpur, Tongi"
     },
     "Savar": {
         "bbox": (23.8000, 90.2000, 23.9500, 90.3300),
         "description": "Savar Upazila, Hemayetpur, Ashulia, DEPZ, Nishchintapur"
     },
+
+    # ── New areas ───────────────────────────────────────────────────────────
+
+    # West/South-West Dhaka
+    "Mohammadpur_Dhanmondi": {
+        "bbox": (23.730, 90.340, 23.780, 90.380),
+        "description": "Mohammadpur, Asad Gate, Shyamoli, Kalyanpur, Dhanmondi 27, New Market"
+    },
+
+    # Central Dhaka corridor
+    "Central_Dhaka": {
+        "bbox": (23.725, 90.370, 23.775, 90.408),
+        "description": "Science Lab, Farmgate, Karwan Bazar, Bijoy Sarani, Shahbagh"
+    },
+
+    # Inner east — Kakrail, Malibagh
+    "Kakrail_Malibagh": {
+        "bbox": (23.735, 90.395, 23.762, 90.428),
+        "description": "Kakrail, Malibagh"
+    },
+
+    # Old / South Dhaka core
+    "Old_Dhaka": {
+        "bbox": (23.700, 90.388, 23.745, 90.425),
+        "description": "Motijheel, Gulistan, Sadarghat"
+    },
+
+    # South-East Dhaka
+    "Jatrabari_Sayedabad": {
+        "bbox": (23.685, 90.415, 23.725, 90.458),
+        "description": "Jatrabari, Sayedabad, Postogola"
+    },
+
+    # North-Central — Gulshan, Banani, Mohakhali
+    "Gulshan_Mohakhali": {
+        "bbox": (23.770, 90.393, 23.812, 90.432),
+        "description": "Mohakhali, Banani, Gulshan 1, Gulshan 2"
+    },
+
+    # East — Badda, Rampura, Notun Bazar
+    "Badda_Rampura": {
+        "bbox": (23.755, 90.420, 23.800, 90.462),
+        "description": "Badda Link Road, Badda, Notun Bazar, Rampura, Rampura Bridge"
+    },
+
+    # North-East — Kuril flyover corridor
+    "Kuril": {
+        "bbox": (23.800, 90.408, 23.858, 90.458),
+        "description": "Kuril Flyover, Khilkhet, Nikunja"
+    },
+
+    # Airport corridor (between Banani/Mohakhali and Uttara)
+    "Airport": {
+        "bbox": (23.823, 90.376, 23.858, 90.418),
+        "description": "Hazrat Shahjalal International Airport, Airport Road"
+    },
 }
+
+# Areas already present in the saved GeoJSON — skip on re-run to save API quota
+ALREADY_FETCHED = {"Mirpur", "Uttara", "Savar"}
 
 # Multiple Overpass API mirrors — tried in order if one fails
 OVERPASS_ENDPOINTS = [
@@ -222,7 +282,7 @@ def main():
         bbox = area_info["bbox"]
         description = area_info["description"]
 
-        if area_name == "Mirpur" and len(existing_ids) > 0:
+        if area_name in ALREADY_FETCHED and len(existing_ids) > 0:
             print(f"\nSkipping {area_name} -- already in existing GeoJSON")
             continue
 
