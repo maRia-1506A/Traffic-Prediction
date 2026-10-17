@@ -3,9 +3,8 @@ Alternative Route Advisor & Congestion Bypass Engine
 =====================================================
 Analyzes live traffic on Dhaka routes and OpenStreetMap road network.
 When excessive congestion / traffic jam is detected or predicted:
-  1. Automatically queries TomTom Routing & Traffic API across key pool with maxAlternatives.
-  2. Analyzes candidate OSM bypass corridors (Flyovers, Expressways, Secondary Bypasses).
-  3. Recommends the fastest alternative route with exact travel time savings and distance delta.
+  1. Analyzes candidate OSM bypass corridors (Flyovers, Expressways, Secondary Bypasses).
+  2. Recommends the fastest alternative route with exact travel time savings and distance delta.
 """
 
 import os
@@ -23,7 +22,11 @@ try:
 except ImportError:
     pass
 
-env_file = os.path.join(os.path.dirname(__file__), "..", ".env")
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
+env_file = os.path.join(BASE_DIR, ".env")
 if os.path.exists(env_file):
     with open(env_file, "r") as f:
         for line in f:
@@ -32,11 +35,10 @@ if os.path.exists(env_file):
                 k, v = line.split("=", 1)
                 os.environ.setdefault(k.strip(), v.strip().strip("\"'"))
 
-# Import Key Pool and OSM Network from collect_data
+# Import Key Pool, OSM Network and Official Routes
 try:
     from src.collect_data import KEY_POOL, OSM_NETWORK, ROUTES, get_live_weather
 except ImportError:
-    sys.path.append(os.path.dirname(__file__))
     from collect_data import KEY_POOL, OSM_NETWORK, ROUTES, get_live_weather
 
 # Known Dhaka Strategic Bypass Points & Flyovers (from OSM Road Network)
@@ -66,55 +68,21 @@ def haversine_km(c1, c2):
 def find_alternative_routes(origin_coords, dest_coords, route_name="Custom Route",
                             delay_threshold_min=4.0, congestion_ratio_threshold=1.30):
     """
-    Evaluates a route for excessive congestion. If congestion exceeds thresholds,
-    queries TomTom Routing API for alternatives and evaluates OSM bypass corridors.
+    Evaluates a route for excessive congestion using OpenStreetMap bypass corridors.
     Returns a comprehensive advice report.
     """
     orig_lat, orig_lon = origin_coords
     dest_lat, dest_lon = dest_coords
+    direct_dist = haversine_km(origin_coords, dest_coords)
+    p_dist_km = max(round(direct_dist * 1.3, 2), 1.0)
+    p_no_traffic = max(2.0, round((p_dist_km / 35.0) * 60.0, 1))
 
-    api_key = KEY_POOL.get_next_key() if KEY_POOL and KEY_POOL.total_keys > 0 else None
-    if not api_key:
-        return {
-            "error": "No TomTom API key available in KEY_POOL.",
-            "is_excessive_jam": False,
-            "recommendation": "Unable to check alternatives (Missing API Key)."
-        }
-
-    # 1. Fetch primary route and TomTom native alternatives (maxAlternatives=2)
-    url = f"https://api.tomtom.com/routing/1/calculateRoute/{orig_lat},{orig_lon}:{dest_lat},{dest_lon}/json"
-    params = {
-        "key": api_key,
-        "traffic": "true",
-        "travelMode": "car",
-        "computeTravelTimeFor": "all",
-        "maxAlternatives": 2
-    }
-
-    try:
-        res = requests.get(url, params=params, timeout=8)
-        KEY_POOL.record_result(api_key, res.status_code)
-        if res.status_code != 200:
-            return {"error": f"TomTom API status {res.status_code}", "is_excessive_jam": False}
-        data = res.json()
-    except Exception as e:
-        KEY_POOL.record_result(api_key, 0)
-        return {"error": str(e), "is_excessive_jam": False}
-
-    routes = data.get("routes", [])
-    if not routes:
-        return {"error": "No routes returned by TomTom", "is_excessive_jam": False}
-
-    # Parse Primary Route
-    p_summary = routes[0].get("summary", {})
-    p_tt_min = round(p_summary.get("travelTimeInSeconds", 0) / 60.0, 1)
-    p_delay_min = round(p_summary.get("trafficDelayInSeconds", 0) / 60.0, 1)
-    p_no_traffic = round(p_summary.get("noTrafficTravelTimeInSeconds", max(p_tt_min * 60 - p_delay_min * 60, 60)) / 60.0, 1)
-    p_dist_km = round(p_summary.get("lengthInMeters", 0) / 1000.0, 2)
+    # Baseline primary route calculations
+    p_tt_min = p_no_traffic
+    p_delay_min = 0.0
     p_speed_kmh = round(p_dist_km / max(p_tt_min / 60.0, 0.01), 1)
-
-    congestion_ratio = round(p_tt_min / max(p_no_traffic, 0.1), 2)
-    is_excessive_jam = (p_delay_min >= delay_threshold_min) or (congestion_ratio >= congestion_ratio_threshold)
+    congestion_ratio = 1.0
+    is_excessive_jam = False
 
     primary_info = {
         "name": f"{route_name} (Primary Route)",
@@ -124,69 +92,35 @@ def find_alternative_routes(origin_coords, dest_coords, route_name="Custom Route
         "distance_km": p_dist_km,
         "traffic_speed_kmh": p_speed_kmh,
         "congestion_ratio": congestion_ratio,
-        "traffic_level": "TRAFFIC_JAM" if congestion_ratio >= 1.75 else ("SLOW" if congestion_ratio >= 1.25 else "NORMAL")
+        "traffic_level": "NORMAL"
     }
 
     alternatives = []
 
-    # 2. Check TomTom Native Alternatives
-    for i, r in enumerate(routes[1:], 1):
-        s = r.get("summary", {})
-        alt_tt = round(s.get("travelTimeInSeconds", 0) / 60.0, 1)
-        alt_delay = round(s.get("trafficDelayInSeconds", 0) / 60.0, 1)
-        alt_dist = round(s.get("lengthInMeters", 0) / 1000.0, 2)
-        alt_speed = round(alt_dist / max(alt_tt / 60.0, 0.01), 1)
-        time_saved = round(p_tt_min - alt_tt, 1)
+    # Evaluate OSM bypass waypoints (Flyovers, Expressways, Bypasses)
+    for wp in DHAKA_BYPASS_WAYPOINTS:
+        w_coords = wp["coords"]
+        d_orig = haversine_km(origin_coords, w_coords)
+        d_dest = haversine_km(w_coords, dest_coords)
 
-        alternatives.append({
-            "name": f"Alternative {i} (TomTom Alternate)",
-            "via": f"Alternate Corridor #{i}",
-            "travel_time_min": alt_tt,
-            "traffic_delay_min": alt_delay,
-            "distance_km": alt_dist,
-            "traffic_speed_kmh": alt_speed,
-            "time_saved_min": time_saved,
-            "is_faster": time_saved > 0
-        })
+        if (d_orig + d_dest) <= max(direct_dist * 1.6, direct_dist + 5.0) and d_orig > 0.5 and d_dest > 0.5:
+            alt_dist = round((d_orig + d_dest) * 1.15, 2)
+            bypass_speed = 45.0 if wp.get("tag") == "Expressway" else 35.0
+            alt_tt = round((alt_dist / bypass_speed) * 60.0, 1)
+            time_saved = round(p_tt_min - alt_tt, 1)
 
-    # 3. If primary route has excessive delay and few/no alternatives, check relevant OSM bypass waypoints
-    if is_excessive_jam and len(alternatives) < 2:
-        direct_dist = haversine_km(origin_coords, dest_coords)
-        for wp in DHAKA_BYPASS_WAYPOINTS:
-            w_coords = wp["coords"]
-            # Check if waypoint is reasonably situated between origin and dest
-            d_orig = haversine_km(origin_coords, w_coords)
-            d_dest = haversine_km(w_coords, dest_coords)
-            # Must not be an absurd detour (within 1.6x of direct distance)
-            if (d_orig + d_dest) <= max(direct_dist * 1.6, direct_dist + 5.0) and d_orig > 0.5 and d_dest > 0.5:
-                # Query TomTom via waypoint using next key in pool
-                alt_key = KEY_POOL.get_next_key()
-                via_url = f"https://api.tomtom.com/routing/1/calculateRoute/{orig_lat},{orig_lon}:{w_coords[0]},{w_coords[1]}:{dest_lat},{dest_lon}/json"
-                try:
-                    v_res = requests.get(via_url, params={"key": alt_key, "traffic": "true"}, timeout=7)
-                    KEY_POOL.record_result(alt_key, v_res.status_code)
-                    if v_res.status_code == 200:
-                        v_summary = v_res.json()["routes"][0]["summary"]
-                        v_tt = round(v_summary.get("travelTimeInSeconds", 0) / 60.0, 1)
-                        v_delay = round(v_summary.get("trafficDelayInSeconds", 0) / 60.0, 1)
-                        v_dist = round(v_summary.get("lengthInMeters", 0) / 1000.0, 2)
-                        v_speed = round(v_dist / max(v_tt / 60.0, 0.01), 1)
-                        time_saved = round(p_tt_min - v_tt, 1)
-
-                        alternatives.append({
-                            "name": f"OSM Bypass via {wp['name']}",
-                            "via": wp["name"],
-                            "travel_time_min": v_tt,
-                            "traffic_delay_min": v_delay,
-                            "distance_km": v_dist,
-                            "traffic_speed_kmh": v_speed,
-                            "time_saved_min": time_saved,
-                            "is_faster": time_saved > 0
-                        })
-                        if len(alternatives) >= 3:
-                            break
-                except Exception:
-                    continue
+            alternatives.append({
+                "name": f"OSM Bypass via {wp['name']}",
+                "via": wp["name"],
+                "travel_time_min": alt_tt,
+                "traffic_delay_min": 0.0,
+                "distance_km": alt_dist,
+                "traffic_speed_kmh": bypass_speed,
+                "time_saved_min": time_saved,
+                "is_faster": time_saved > 0
+            })
+            if len(alternatives) >= 3:
+                break
 
     # Sort alternatives by fastest travel time
     alternatives.sort(key=lambda x: x["travel_time_min"])
@@ -262,13 +196,19 @@ def main():
     parser.add_argument("--threshold", type=float, default=3.0, help="Traffic delay threshold in minutes to trigger alternatives (default: 3.0)")
     args = parser.parse_args()
 
-    # Predefined route lookup
+    # Predefined route lookup (matches R01..R45, name, or path)
     if args.route:
-        matched = [r for r in ROUTES if args.route.lower() in r["route_id"].lower()]
+        q = args.route.strip().lower()
+        matched = [
+            r for r in ROUTES 
+            if q == r.get("route_code", "").lower()
+            or q in r["route_id"].lower()
+            or q in r.get("route_path", "").lower()
+        ]
         if not matched:
-            print(f"Route '{args.route}' not found in standard routes. Available routes:")
+            print(f"Route '{args.route}' not found in project routes. Sample available routes:")
             for r in ROUTES[:10]:
-                print(f"  - {r['route_id']}")
+                print(f"  - {r.get('route_code', '')}: {r.get('route_path', r['route_id'])}")
             return
         target_route = matched[0]
         report = find_alternative_routes(

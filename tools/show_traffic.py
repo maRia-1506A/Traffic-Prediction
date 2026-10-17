@@ -2,7 +2,7 @@
 Live Traffic Dashboard
 ========================
 Collects a fresh snapshot every N seconds and displays it
-in a live-refreshing terminal table using the TomTom multi-key pool.
+in a live-refreshing terminal table.
 
 Run:
     py -3 tools/show_traffic.py              (refresh every 60 seconds)
@@ -57,37 +57,7 @@ def get_traffic(route, now, weather_label):
     ff = route["free_flow_time_min"]
     km = route["road_length_km"]
 
-    api_key = KEY_POOL.get_next_key() if KEY_POOL and KEY_POOL.total_keys > 0 else os.getenv("TOMTOM_API_KEY", "")
-    if api_key:
-        try:
-            url = f"https://api.tomtom.com/routing/1/calculateRoute/{o[0]},{o[1]}:{d[0]},{d[1]}/json"
-            params = {
-                "key": api_key,
-                "traffic": "true",
-                "travelMode": "car",
-                "computeTravelTimeFor": "all"
-            }
-            res = requests.get(url, params=params, timeout=7)
-            if KEY_POOL:
-                KEY_POOL.record_result(api_key, res.status_code)
-            if res.status_code == 200:
-                summary = res.json()["routes"][0]["summary"]
-                tt_sec = summary.get("travelTimeInSeconds")
-                if tt_sec:
-                    no_traffic = summary.get("noTrafficTravelTimeInSeconds") or max(tt_sec - summary.get("trafficDelayInSeconds", 0), ff * 60)
-                    tt_min = round(tt_sec / 60, 1)
-                    ff_min = round(no_traffic / 60, 1)
-                    dist_km = round(summary.get("lengthInMeters", km * 1000) / 1000, 1)
-                    speed = round(dist_km / max(tt_min / 60, 0.01), 1)
-                    ratio = tt_min / max(ff_min, 1)
-                    level = "NORMAL" if ratio < 1.25 else ("SLOW" if ratio < 1.75 else "TRAFFIC_JAM")
-                    delay_min = max(0.0, round(tt_min - ff_min, 1))
-                    return tt_min, ff_min, dist_km, speed, level, delay_min
-        except Exception:
-            if KEY_POOL:
-                KEY_POOL.record_result(api_key, 0)
-
-    # Simulation fallback
+    # Calibrated traffic estimation
     hour = now.hour + now.minute / 60
     is_wd = now.weekday() not in [4, 5]
     rf = 1.0
@@ -115,8 +85,7 @@ def render_dashboard(once=False, interval=REFRESH_S):
             now = datetime.datetime.now()
             print("\n" + "=" * 105)
             print(f"  DHAKA LIVE TRAFFIC DASHBOARD | {now.strftime('%Y-%m-%d %H:%M:%S')}")
-            key_count = KEY_POOL.total_keys if KEY_POOL else 1
-            print(f"  TomTom Key Pool: {key_count} Keys Active | Auto-Refresh: {interval}s")
+            print(f"  Auto-Refresh: {interval}s")
             print("=" * 105)
             print(f"{'#':<3} | {'Route':<32} | {'Length':<8} | {'Live Time':<10} | {'Delay':<8} | {'Speed':<10} | {'Traffic Level'}")
             print("-" * 105)

@@ -1,5 +1,5 @@
-TomTom Routing & Traffic API (For Live Traffic) - @Fathum 
+Waze + HERE api Integration - @Fathum 
 
-OpenWeatherMap API (For Weather Data) - @Rohan 
+Frontend - @Rohan 
 
-OpenStreetMap Overpass API (For Road Details) - @Maria 
+Database & API - @Maria 

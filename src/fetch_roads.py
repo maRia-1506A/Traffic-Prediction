@@ -93,10 +93,27 @@ AREAS = {
         "bbox": (23.823, 90.376, 23.858, 90.418),
         "description": "Hazrat Shahjalal International Airport, Airport Road"
     },
+
+    # North — Gazipur Chowrasta & surrounding corridors (for R04, R40, R50)
+    "Gazipur": {
+        "bbox": (23.950, 90.350, 24.030, 90.440),
+        "description": "Gazipur Chowrasta, Joydebpur, Chandona, Dhaka-Mymensingh Rd"
+    },
+
+    # South-East — Narayanganj Chasara & Link Road (for R09, R38)
+    "Narayanganj": {
+        "bbox": (23.600, 90.470, 23.680, 90.530),
+        "description": "Narayanganj Chasara, Signboard, Link Road, Shibu Nibash"
+    },
 }
 
 # Areas already present in the saved GeoJSON — skip on re-run to save API quota
-ALREADY_FETCHED = {"Mirpur", "Uttara", "Savar"}
+ALREADY_FETCHED = {
+    "Mirpur", "Uttara", "Savar",
+    "Mohammadpur_Dhanmondi", "Central_Dhaka", "Kakrail_Malibagh",
+    "Old_Dhaka", "Jatrabari_Sayedabad", "Gulshan_Mohakhali",
+    "Badda_Rampura", "Kuril", "Airport"
+}
 
 # Multiple Overpass API mirrors — tried in order if one fails
 OVERPASS_ENDPOINTS = [
