@@ -210,6 +210,16 @@ class OSMRoadNetwork:
 OPENWEATHERMAP_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "")
 OSM_NETWORK = OSMRoadNetwork(GEOJSON_PATH)
 
+try:
+    from src.traffic_clients import DualTrafficEngine
+except ImportError:
+    try:
+        from traffic_clients import DualTrafficEngine
+    except ImportError:
+        DualTrafficEngine = None
+
+TRAFFIC_ENGINE = DualTrafficEngine() if DualTrafficEngine else None
+
 # ---------------------------------------------------------
 # 1. Route Configuration (Official Project Corridors R01 to R50)
 # ---------------------------------------------------------
@@ -941,19 +951,33 @@ def get_live_weather(lat: float, lon: float):
     return default_res
 
 # ---------------------------------------------------------
-# 3. Traffic Data Estimator (TomTom Removed)
+# 3. Traffic Data Fetcher (Google Maps & Waze Dual Engine)
 # ---------------------------------------------------------
 def get_live_traffic(route: dict, now: datetime.datetime, weather: dict, key_pool = None):
     """
-    Computes travel time, delay, and upstream/downstream flow speeds.
+    Fetches real-time traffic using Google Maps Routes API with Waze failover.
+    Falls back gracefully to calibrated Dhaka simulation if offline.
     """
+    if TRAFFIC_ENGINE:
+        res = TRAFFIC_ENGINE.fetch_live_traffic(route, now, weather)
+        return (
+            res["travel_time_min"],
+            res["free_flow_time_min"],
+            res["traffic_speed_kmh"],
+            res["traffic_level"],
+            res["traffic_delay_min"],
+            res["source_label"],
+            res["upstream_speed_kmh"],
+            res["downstream_speed_kmh"]
+        )
+
     orig_lat, orig_lon = route["origin_coords"]
     dest_lat, dest_lon = route["dest_coords"]
     free_flow = route.get("free_flow_time_min", 10.0)
     road_len = route.get("road_length_km", 5.0)
     free_flow_speed = round(road_len / max(free_flow / 60.0, 0.01), 1)
 
-    # Calibrated Traffic Model (Dhaka Rush Hour + Weather Effects)
+    # Calibrated Traffic Model Fallback (Dhaka Rush Hour + Weather Effects)
     hour = now.hour + (now.minute / 60.0)
     is_weekend = now.weekday() in [4, 5]  # Friday (4) and Saturday (5) in Bangladesh
 

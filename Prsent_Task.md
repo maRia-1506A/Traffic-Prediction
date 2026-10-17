@@ -1,4 +1,4 @@
-Waze + HERE api Integration - @Fathum 
+Google Maps + Waze API Integration - @Fathum
 
 Frontend - @Rohan 
 
