@@ -119,6 +119,7 @@ def fetch_unified_traffic_record(origin_coords: tuple, dest_coords: tuple, route
         "speed_same_time_yesterday_kmh": speed_yesterday,
         "speed_same_time_last_week_kmh": speed_last_week,
         "traffic_level": traffic_level,
+        "traffic_source": key_used,
 
         # 3. Weather & Environmental Features
         "weather_condition": weather_data["weather"],
@@ -145,7 +146,7 @@ def print_unified_record(rec: dict):
     print(f"    - One-Way Road:           {rec['is_oneway']}")
     print(f"    - Distance to Junction:   {rec['distance_to_junction_m']} m")
 
-    print("\n[2] Live Traffic Engine (Speed, Travel Time & Macro Density):")
+    print(f"\n[2] Live Traffic Engine ({rec.get('traffic_source', 'Google Maps + Waze')}):")
     print(f"    - Traffic Level:          {rec['traffic_level']}")
     print(f"    - Live Speed:             {rec['traffic_speed_kmh']} km/h")
     print(f"    - Upstream Speed (Entry): {rec['upstream_speed_kmh']} km/h (incoming flow)")
@@ -157,6 +158,7 @@ def print_unified_record(rec: dict):
     print(f"    - Travel Time:            {rec['travel_time_min']} mins (Normal: {rec['free_flow_time_min']} mins)")
     print(f"    - Traffic Delay:          +{rec['traffic_delay_min']} mins")
     print(f"    - Congestion Ratio:       {rec['congestion_ratio']}x")
+    print(f"    - Engine Provider:        {rec.get('traffic_source', 'Google Maps + Waze')}")
 
     print("\n[3] OpenWeatherMap API (Environmental & Atmospheric Factors):")
     print(f"    - Sky Condition:          {rec['weather_condition']}")

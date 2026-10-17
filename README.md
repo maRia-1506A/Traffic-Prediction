@@ -37,14 +37,19 @@ Traffic-Prediction/
 
 ---
 
-## 🗺️ OpenStreetMap & Physical Infrastructure Integration
+## 🗺️ Dual Traffic Engine (Google Maps Routes API + Waze)
 
-1. **OpenStreetMap Overpass API (`data/dhaka_roads.geojson`)**:
-   - Provides physical infrastructure features: OSM Way ID, road classification (`highway`), lane count (`lanes`), directionality (`oneway`), and geometry length.
-2. **Dynamic Traffic Engine**:
-   - Computes dynamic traffic state: travel time, free-flow baseline, traffic delay, speed (km/h), and congestion ratio.
-3. **Unified Machine Learning Dataset (`data/traffic_data.csv`)**:
-   - Stores 43 features per record: physical infrastructure (OSM), traffic metrics, temporal context (rush hour, day of week), weather, and lag memory buffers (`prev_traffic_5min`, `prev_speed_5min`, etc.).
+The system features a **High-Precision Dual-Engine Architecture** for real-time congestion accuracy:
+1. **Google Maps Routes API v2** (Primary):
+   - High-precision live travel durations, traffic congestion delays, and road segment speeds.
+   - Configured via `GOOGLE_MAPS_API_KEY` in `.env`.
+2. **Waze Live Engine** (Backup):
+   - Queries real-time crowdsourced smartphone probe speeds and jam delays across Dhaka.
+   - Requires zero API keys or credit card registration.
+3. **Consensus & Multi-Source Fusion**:
+   - Primary live traffic from Google Maps with zero-downtime automatic failover to Waze.
+   - Binds physical geometry from **OpenStreetMap (`dhaka_roads.geojson`)** and live weather from **OpenWeatherMap**.
+   - Graceful fallback to calibrated Dhaka traffic simulation if fully offline.
 
 ---
 
