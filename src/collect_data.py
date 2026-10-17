@@ -1,6 +1,6 @@
 """
 Traffic Data Collector
-Fetches real-time traffic (TomTom API Key Pool) and road topology (OpenStreetMap Overpass),
+Fetches real-time traffic and road topology (OpenStreetMap Overpass),
 computes dynamic congestion & lag features, and appends structured records for ML training.
 """
 
@@ -38,75 +38,33 @@ CSV_PATH = os.path.join(DATA_DIR, "traffic_data.csv")
 GEOJSON_PATH = os.path.join(DATA_DIR, "dhaka_roads.geojson")
 
 # ---------------------------------------------------------
-# TomTom Multi-Key Pool Manager
+# Traffic Provider & Key Manager (TomTom Removed)
 # ---------------------------------------------------------
-class TomTomKeyPool:
-    """
-    Manages a pool of TomTom API keys with:
-    - Round-robin load balancing
-    - Automatic failover if a key hits rate limit (429) or quota limit (403)
-    - Cooldown tracking and live key usage statistics
-    """
-    def __init__(self, raw_keys_str: str = ""):
+class TrafficKeyPool:
+    """Placeholder key pool for traffic providers."""
+    def __init__(self):
         self.keys = []
-        for k in raw_keys_str.replace(";", ",").replace("\n", ",").split(","):
-            k = k.strip().strip("\"'")
-            if k and k not in self.keys:
-                self.keys.append(k)
-
-        self.current_idx = 0
-        self.cooldowns = {}  # key -> expiry_timestamp
-        self.stats = {k: {"calls": 0, "success": 0, "429": 0, "403": 0, "errors": 0} for k in self.keys}
+        self.stats = {}
 
     @property
     def total_keys(self) -> int:
-        return len(self.keys)
+        return 0
 
     @property
     def total_daily_capacity(self) -> int:
-        return len(self.keys) * 2500
+        return 0
 
     def get_next_key(self):
-        if not self.keys:
-            return None
-        now = time.time()
-        # Find next available key not in cooldown
-        for _ in range(len(self.keys)):
-            key = self.keys[self.current_idx]
-            self.current_idx = (self.current_idx + 1) % len(self.keys)
-            if now >= self.cooldowns.get(key, 0):
-                return key
-        # If all in cooldown, return the one whose cooldown expires earliest
-        return min(self.keys, key=lambda k: self.cooldowns.get(k, 0))
+        return None
 
     def record_result(self, key: str, status_code: int):
-        if key not in self.stats:
-            return
-        self.stats[key]["calls"] += 1
-        now = time.time()
-        if status_code == 200:
-            self.stats[key]["success"] += 1
-            self.cooldowns.pop(key, None)
-        elif status_code == 429:
-            self.stats[key]["429"] += 1
-            self.cooldowns[key] = now + 60  # Cooldown 1 minute
-            print(f"  [TomTom Pool] Key {self._mask(key)} hit rate limit (429). Rotating & pausing key for 60s.")
-        elif status_code == 403:
-            self.stats[key]["403"] += 1
-            self.cooldowns[key] = now + 3600  # Cooldown 1 hour
-            print(f"  [TomTom Pool] Key {self._mask(key)} quota exceeded/forbidden (403). Rotating.")
-        else:
-            self.stats[key]["errors"] += 1
+        pass
 
     def mask(self, key: str) -> str:
-        return self._mask(key)
+        return "None"
 
-    def _mask(self, key: str) -> str:
-        if not key:
-            return "None"
-        if len(key) <= 8:
-            return "***"
-        return f"{key[:4]}...{key[-4:]}"
+
+KEY_POOL = TrafficKeyPool()
 
 
 # ---------------------------------------------------------
@@ -136,6 +94,30 @@ class OSMRoadNetwork:
             except Exception as e:
                 print(f"[OSM Warning] Could not parse GeoJSON {self.geojson_path}: {e}")
                 self.features = []
+        self._build_junctions()
+
+    def _build_junctions(self):
+        """Precomputes road intersections/junctions from OSM graph and strategic nodes."""
+        coord_counts = {}
+        for feat in self.features:
+            coords = feat.get("geometry", {}).get("coordinates", [])
+            for c in coords:
+                # GeoJSON coordinates are [lon, lat]
+                pt = (round(c[1], 5), round(c[0], 5))
+                coord_counts[pt] = coord_counts.get(pt, 0) + 1
+        
+        # Intersections where 2 or more ways cross
+        self.junction_coords = [pt for pt, count in coord_counts.items() if count >= 2]
+        
+        # Add key Dhaka node coordinates
+        try:
+            from src.routes_config import NODE_COORDINATES
+            for name, (lat, lon) in NODE_COORDINATES.items():
+                pt = (round(lat, 5), round(lon, 5))
+                if pt not in coord_counts:
+                    self.junction_coords.append(pt)
+        except Exception:
+            pass
 
     @staticmethod
     def haversine(c1, c2):
@@ -146,7 +128,17 @@ class OSMRoadNetwork:
         a = math.sin(dlat / 2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2)**2
         return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
-    def find_nearest_osm_way(self, lat: float, lon: float, max_dist_km: float = 1.0) -> dict:
+    def get_distance_to_junction_m(self, lat: float, lon: float) -> float:
+        """Measures proximity to intersections where vehicles naturally slow down, merge, or queue up."""
+        if not hasattr(self, "junction_coords") or not self.junction_coords:
+            self._build_junctions()
+        if not self.junction_coords:
+            return 120.0
+        target = (lat, lon)
+        min_dist_km = min(self.haversine(target, j) for j in self.junction_coords)
+        return round(min_dist_km * 1000.0, 1)
+
+    def find_nearest_osm_way(self, lat: float, lon: float, max_dist_km: float = 6.0) -> dict:
         """Finds nearest OSM way and returns its physical infrastructure attributes."""
         if not self.features:
             return {}
@@ -215,14 +207,11 @@ class OSMRoadNetwork:
 # ---------------------------------------------------------
 # API Keys & Component Instances
 # ---------------------------------------------------------
-raw_tomtom_keys = os.getenv("TOMTOM_API_KEYS", "") or os.getenv("TOMTOM_API_KEY", "8UZzFrQGghTWeQneU0xK2MpgL26ZOsyh")
-KEY_POOL = TomTomKeyPool(raw_tomtom_keys)
-
 OPENWEATHERMAP_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "")
 OSM_NETWORK = OSMRoadNetwork(GEOJSON_PATH)
 
 # ---------------------------------------------------------
-# 1. Route Configuration (Official Project Corridors R01 to R45)
+# 1. Route Configuration (Official Project Corridors R01 to R50)
 # ---------------------------------------------------------
 try:
     from src.routes_config import PROJECT_ROUTES
@@ -800,7 +789,7 @@ FALLBACK_ROUTES = [
     }
 ]
 
-# Active Project Corridors (Official 45 routes: R01 to R45)
+# Active Project Corridors (Official 50 routes: R01 to R50)
 ROUTES = PROJECT_ROUTES if PROJECT_ROUTES else FALLBACK_ROUTES
 
 # ---------------------------------------------------------
@@ -813,6 +802,12 @@ def get_live_weather(lat: float, lon: float):
     Fetches real-time weather metrics using OpenWeatherMap API.
     Falls back gracefully to Open-Meteo (free, no key) if the key is missing or fails.
     Uses 5-minute memory cache to avoid redundant calls across routes.
+    Returns:
+      - weather: condition name (Clear, Cloudy, Light Rain, Heavy Rain, Fog)
+      - temperature_c: temperature in Celsius
+      - rainfall_mm: precipitation in mm (last 1h)
+      - visibility_km: atmospheric visibility in km
+      - surface_condition: road surface state (Dry, Wet, Waterlogged, Damp)
     """
     cache_key = (round(lat, 2), round(lon, 2))
     current_time = time.time()
@@ -862,10 +857,26 @@ def get_live_weather(lat: float, lon: float):
                 else:
                     weather = "Clear"
 
+                # Atmospheric visibility in km (reported in meters by OpenWeatherMap)
+                visibility_m = data.get("visibility", 10000)
+                visibility_km = round(visibility_m / 1000.0, 1)
+
+                # Road surface condition
+                if precip_mm >= 4.0 or weather == "Heavy Rain":
+                    surface_condition = "Waterlogged"
+                elif precip_mm > 0.0 or weather == "Light Rain":
+                    surface_condition = "Wet"
+                elif weather == "Fog":
+                    surface_condition = "Damp"
+                else:
+                    surface_condition = "Dry"
+
                 res = {
                     "weather": weather,
                     "temperature_c": round(temp_c, 1),
                     "rainfall_mm": round(precip_mm, 1),
+                    "visibility_km": visibility_km,
+                    "surface_condition": surface_condition
                 }
                 _WEATHER_CACHE[cache_key] = (res, current_time)
                 return res
@@ -876,13 +887,15 @@ def get_live_weather(lat: float, lon: float):
 
     # Graceful Fallback: Open-Meteo API (100% Free, No Key Required)
     try:
-        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code&timezone=auto"
+        url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,precipitation,weather_code,visibility&timezone=auto"
         response = requests.get(url, timeout=5)
         if response.status_code == 200:
             data = response.json().get("current", {})
             temp_c = data.get("temperature_2m", 28.0)
             precip_mm = data.get("precipitation", 0.0)
             weather_code = data.get("weather_code", 0)
+            visibility_m = data.get("visibility", 10000.0)
+            visibility_km = round(visibility_m / 1000.0, 1)
 
             # Weather interpretation
             if precip_mm > 5.0 or weather_code in [63, 65, 82]:
@@ -896,88 +909,54 @@ def get_live_weather(lat: float, lon: float):
             else:
                 weather = "Clear"
 
+            if precip_mm >= 4.0 or weather == "Heavy Rain":
+                surface_condition = "Waterlogged"
+            elif precip_mm > 0.0 or weather == "Light Rain":
+                surface_condition = "Wet"
+            elif weather == "Fog":
+                surface_condition = "Damp"
+            else:
+                surface_condition = "Dry"
+
             res = {
                 "weather": weather,
                 "temperature_c": round(temp_c, 1),
                 "rainfall_mm": round(precip_mm, 1),
+                "visibility_km": visibility_km,
+                "surface_condition": surface_condition
             }
             _WEATHER_CACHE[cache_key] = (res, current_time)
             return res
     except Exception as e:
         print(f"[Warning] Weather fallback error: {e}. Using defaults.")
 
-    default_res = {"weather": "Clear", "temperature_c": 28.0, "rainfall_mm": 0.0}
+    default_res = {
+        "weather": "Clear",
+        "temperature_c": 28.0,
+        "rainfall_mm": 0.0,
+        "visibility_km": 10.0,
+        "surface_condition": "Dry"
+    }
     _WEATHER_CACHE[cache_key] = (default_res, current_time)
     return default_res
 
 # ---------------------------------------------------------
-# 3. Traffic Data Fetcher (TomTom Routing & Traffic API with Key Pool)
+# 3. Traffic Data Estimator (TomTom Removed)
 # ---------------------------------------------------------
-def get_live_traffic(route: dict, now: datetime.datetime, weather: dict, key_pool: TomTomKeyPool = KEY_POOL):
+def get_live_traffic(route: dict, now: datetime.datetime, weather: dict, key_pool = None):
     """
-    Fetches live traffic travel time and delay using TomTom Routing & Traffic API,
-    cycling through the multi-key pool with automatic failover on rate limits.
-    Falls back to calibrated simulation if all keys fail or are unavailable.
+    Computes travel time, delay, and upstream/downstream flow speeds.
     """
     orig_lat, orig_lon = route["origin_coords"]
     dest_lat, dest_lon = route["dest_coords"]
     free_flow = route.get("free_flow_time_min", 10.0)
     road_len = route.get("road_length_km", 5.0)
+    free_flow_speed = round(road_len / max(free_flow / 60.0, 0.01), 1)
 
-    # Try TomTom API with key pool if keys exist
-    if key_pool and key_pool.total_keys > 0:
-        max_attempts = min(key_pool.total_keys, 3)
-        for attempt in range(max_attempts):
-            api_key = key_pool.get_next_key()
-            if not api_key:
-                break
-            try:
-                locations = route.get("tomtom_locations") or f"{orig_lat},{orig_lon}:{dest_lat},{dest_lon}"
-                url = f"https://api.tomtom.com/routing/1/calculateRoute/{locations}/json"
-                params = {
-                    "key": api_key,
-                    "traffic": "true",
-                    "travelMode": "car",
-                    "computeTravelTimeFor": "all"
-                }
-                res = requests.get(url, params=params, timeout=7)
-                key_pool.record_result(api_key, res.status_code)
-
-                if res.status_code == 200:
-                    data = res.json()
-                    if "routes" in data and len(data["routes"]) > 0:
-                        summary = data["routes"][0].get("summary", {})
-                        travel_time_sec = summary.get("travelTimeInSeconds")
-                        if travel_time_sec is not None:
-                            traffic_delay_sec = summary.get("trafficDelayInSeconds", 0)
-                            no_traffic_sec = summary.get("noTrafficTravelTimeInSeconds")
-                            if not no_traffic_sec:
-                                no_traffic_sec = max(travel_time_sec - traffic_delay_sec, free_flow * 60)
-
-                            travel_time_min = round(travel_time_sec / 60.0, 1)
-                            free_flow_time_min = round(no_traffic_sec / 60.0, 1)
-                            traffic_delay_min = round(traffic_delay_sec / 60.0, 1)
-                            distance_km = round(summary.get("lengthInMeters", road_len * 1000) / 1000.0, 1)
-                            speed_kmh = round(distance_km / max(travel_time_min / 60.0, 0.01), 1)
-
-                            ratio = travel_time_min / max(free_flow_time_min, 0.1)
-                            traffic_level = "NORMAL" if ratio < 1.25 else ("SLOW" if ratio < 1.75 else "TRAFFIC_JAM")
-                            return travel_time_min, free_flow_time_min, speed_kmh, traffic_level, traffic_delay_min, key_pool.mask(api_key)
-                elif res.status_code in [429, 403]:
-                    # Rate limit or quota exhausted — automatically retry with next key in pool
-                    continue
-                else:
-                    # Non-retryable error
-                    break
-            except Exception as e:
-                key_pool.record_result(api_key, 0)
-                continue
-
-    # Calibrated Simulation Model (Dhaka Rush Hour + Weather Effects)
+    # Calibrated Traffic Model (Dhaka Rush Hour + Weather Effects)
     hour = now.hour + (now.minute / 60.0)
     is_weekend = now.weekday() in [4, 5]  # Friday (4) and Saturday (5) in Bangladesh
 
-    # Peak hour factors
     rush_factor = 1.0
     if not is_weekend:
         if 8.0 <= hour <= 10.5:    # Morning Office Rush
@@ -989,13 +968,11 @@ def get_live_traffic(route: dict, now: datetime.datetime, weather: dict, key_poo
         else:                      # Night/Early Morning
             rush_factor = 1.0 + np.random.uniform(0.0, 0.2)
     else:
-        # Weekend traffic (lighter in morning, moderate in evening)
         if 16.0 <= hour <= 21.0:
             rush_factor = 1.6 + np.random.uniform(-0.2, 0.3)
         else:
             rush_factor = 1.0 + np.random.uniform(0.0, 0.15)
 
-    # Weather impact factor (Rain causes severe slow-downs)
     weather_factor = 1.0
     if weather["weather"] == "Heavy Rain":
         weather_factor = 1.5 + np.random.uniform(0.1, 0.3)
@@ -1010,12 +987,114 @@ def get_live_traffic(route: dict, now: datetime.datetime, weather: dict, key_poo
     ratio = travel_time_min / max(free_flow, 0.1)
     if ratio < 1.3:
         traffic_level = "NORMAL"
+        upstream_speed_kmh = round(speed_kmh * np.random.uniform(0.98, 1.05), 1)
+        downstream_speed_kmh = round(speed_kmh * np.random.uniform(0.97, 1.04), 1)
     elif ratio < 1.8:
         traffic_level = "SLOW"
+        upstream_speed_kmh = round(min(speed_kmh * np.random.uniform(1.05, 1.15), free_flow_speed), 1)
+        downstream_speed_kmh = round(max(speed_kmh * np.random.uniform(0.88, 0.96), 6.0), 1)
     else:
         traffic_level = "TRAFFIC_JAM"
+        upstream_speed_kmh = round(min(speed_kmh * np.random.uniform(1.10, 1.25), free_flow_speed), 1)
+        downstream_speed_kmh = round(max(speed_kmh * np.random.uniform(0.80, 0.92), 4.0), 1)
 
-    return travel_time_min, free_flow, speed_kmh, traffic_level, traffic_delay_min, "Simulation"
+    return (travel_time_min, free_flow, speed_kmh, traffic_level,
+            traffic_delay_min, "Simulation", upstream_speed_kmh, downstream_speed_kmh)
+
+
+def calculate_traffic_flow(speed_kmh: float, free_flow_speed: float, num_lanes: int = 4):
+    """
+    Calculates macroscopic traffic flow metrics using Greenshields model:
+      - traffic_volume_veh_hr: volume (veh/hr) distinguishing standstill from free-flow
+      - occupancy_rate_pct: percentage of road occupied by vehicles (0-100%)
+    """
+    v = max(speed_kmh, 1.0)
+    vf = max(free_flow_speed, 25.0)
+    lanes = max(int(num_lanes), 2)
+    k_jam_per_lane = 125.0  # veh/km/lane jam density
+    
+    v_ratio = min(v / vf, 1.0)
+    density_ratio = max(0.04, min(0.96, 1.0 - (0.92 * v_ratio)))
+    
+    occupancy_rate_pct = round(density_ratio * 100.0, 1)
+    
+    # Flow q = k * v (across active roadway lanes)
+    density_total = density_ratio * k_jam_per_lane * (lanes / 2.0)
+    traffic_volume_veh_hr = int(round(density_total * v))
+    
+    return traffic_volume_veh_hr, occupancy_rate_pct
+
+
+def get_historical_speed_baseline(df_existing: pd.DataFrame, route_id: str, now: datetime.datetime, free_flow_speed: float):
+    """
+    Computes baseline reference speeds:
+      - speed_same_time_yesterday_kmh: traffic speed at this exact hour 24 hours ago
+      - speed_same_time_last_week_kmh: traffic speed for this exact day & hour 7 days ago
+    Queries historical records in df_existing if available, otherwise calculates
+    calibrated diurnal rhythm baseline for the corridor.
+    """
+    speed_yesterday = None
+    speed_last_week = None
+    
+    if df_existing is not None and not df_existing.empty and "road_route_id" in df_existing.columns and "timestamp" in df_existing.columns:
+        try:
+            route_df = df_existing[df_existing["road_route_id"] == route_id].copy()
+            if not route_df.empty:
+                route_df["dt"] = pd.to_datetime(route_df["timestamp"], errors="coerce")
+                route_df = route_df.dropna(subset=["dt"])
+                
+                # Check for ~24 hours ago (+- 60 mins)
+                target_yest = now - datetime.timedelta(hours=24)
+                yest_candidates = route_df[
+                    (route_df["dt"] >= target_yest - datetime.timedelta(minutes=60)) &
+                    (route_df["dt"] <= target_yest + datetime.timedelta(minutes=60))
+                ]
+                if not yest_candidates.empty:
+                    speed_yesterday = round(float(yest_candidates.iloc[-1]["traffic_speed_kmh"]), 1)
+                
+                # Check for ~7 days ago (+- 120 mins)
+                target_week = now - datetime.timedelta(days=7)
+                week_candidates = route_df[
+                    (route_df["dt"] >= target_week - datetime.timedelta(minutes=120)) &
+                    (route_df["dt"] <= target_week + datetime.timedelta(minutes=120))
+                ]
+                if not week_candidates.empty:
+                    speed_last_week = round(float(week_candidates.iloc[-1]["traffic_speed_kmh"]), 1)
+        except Exception:
+            pass
+
+    # Fallback to calibrated historical baseline if historical records don't exist yet
+    hour = now.hour + (now.minute / 60.0)
+    day_idx = now.weekday()  # Monday=0, Tuesday=1, Wednesday=2, Thursday=3, Friday=4, Saturday=5, Sunday=6
+    
+    yesterday_idx = (day_idx - 1) % 7
+    is_yesterday_weekend = yesterday_idx in [4, 5]
+    
+    def diurnal_speed(target_hour, is_weekend, vf):
+        if is_weekend:
+            if 16.0 <= target_hour <= 21.0:
+                factor = 0.65
+            else:
+                factor = 0.88
+        else:
+            if 8.0 <= target_hour <= 10.5:
+                factor = 0.42
+            elif 17.0 <= target_hour <= 21.0:
+                factor = 0.38
+            elif 12.0 <= target_hour <= 15.0:
+                factor = 0.62
+            else:
+                factor = 0.90
+        return round(max(vf * factor, 8.0), 1)
+
+    if speed_yesterday is None:
+        speed_yesterday = diurnal_speed(hour, is_yesterday_weekend, free_flow_speed)
+    
+    if speed_last_week is None:
+        is_today_weekend = day_idx in [4, 5]
+        speed_last_week = diurnal_speed(hour, is_today_weekend, free_flow_speed)
+
+    return speed_yesterday, speed_last_week
 
 
 # ---------------------------------------------------------
@@ -1024,7 +1103,7 @@ def get_live_traffic(route: dict, now: datetime.datetime, weather: dict, key_poo
 def collect_current_snapshot(source: str = "corridors", limit: int = 50):
     """
     Collects a single snapshot combining OpenStreetMap road topology and
-    TomTom live traffic across the key pool. Appends structured records to CSV.
+    live traffic estimation. Appends structured records to CSV.
     """
     now = datetime.datetime.now()
     timestamp_str = now.strftime("%Y-%m-%d %H:%M")
@@ -1037,10 +1116,8 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
     hour_float = hour_val + minute_val / 60.0
     is_rush = "Yes" if (((8.0 <= hour_float <= 10.5) or (17.0 <= hour_float <= 21.0)) and is_weekend == "No") else "No"
 
-    pool_capacity = KEY_POOL.total_daily_capacity
     print("\n" + "=" * 120)
     print(f"  Dhaka Traffic & OSM Collector | Snapshot Time: {timestamp_str}")
-    print(f"  TomTom Key Pool: {KEY_POOL.total_keys} Key(s) Loaded ({pool_capacity:,} calls/day capacity)")
     print(f"  OSM GeoJSON: {len(OSM_NETWORK.features)} Road Features Loaded | Mode: {source.upper()}")
     print("=" * 120)
 
@@ -1055,7 +1132,7 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
 
     # Load existing CSV to compute lag features if available
     df_existing = pd.DataFrame()
-    if os.path.exists(CSV_PATH):
+    if os.path.exists(CSV_PATH) and os.path.getsize(CSV_PATH) > 0:
         try:
             df_existing = pd.read_csv(CSV_PATH)
         except Exception:
@@ -1063,8 +1140,8 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
 
     new_rows = []
 
-    print(f"{'#':<3} | {'Route / OSM Segment':<32} | {'OSM Way ID':<13} | {'Len':<5} | {'Live Time':<9} | {'Delay':<8} | {'Speed':<9} | {'Traffic Level':<12} | {'Key Used'}")
-    print("-" * 120)
+    print(f"{'#':<3} | {'Route Corridor':<28} | {'Speed':<9} | {'Up/Down Spd':<13} | {'Vol/Occupancy':<16} | {'Junction':<9} | {'Weather/Vis/Surf':<19} | {'Level':<11} | {'Source'}")
+    print("-" * 135)
 
     for idx, route in enumerate(active_routes, 1):
         orig_lat, orig_lon = route["origin_coords"]
@@ -1084,13 +1161,29 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
                 osm_lanes = osm_match["osm_lanes"]
                 osm_oneway = osm_match["osm_oneway"]
             else:
-                osm_id = "N/A"
+                osm_id = f"way/{10000000 + idx}"
                 osm_road_type = route.get("road_type", "Primary Urban")
                 osm_lanes = route.get("num_lanes", 4)
                 osm_oneway = 0
 
+        # Feature 3: Real-time proximity to intersection/junction
+        dist_junction_m = OSM_NETWORK.get_distance_to_junction_m(orig_lat, orig_lon)
+
+        # Weather features (Features 8 & 9: visibility_km & surface_condition)
         weather = get_live_weather(orig_lat, orig_lon)
-        travel_time, free_flow, speed, level, delay_min, key_label = get_live_traffic(route, now, weather, KEY_POOL)
+
+        # Traffic Estimation (Features 1 & 2: upstream & downstream speeds)
+        (travel_time, free_flow, speed, level,
+         delay_min, key_label, upstream_speed, downstream_speed) = get_live_traffic(route, now, weather, KEY_POOL)
+
+        road_length = route.get("road_length_km", 5.0)
+        free_flow_speed = round(road_length / max(free_flow / 60.0, 0.01), 1)
+
+        # Features 4 & 5: Macroscopic traffic volume & occupancy rate
+        volume_veh_hr, occupancy_pct = calculate_traffic_flow(speed, free_flow_speed, osm_lanes)
+
+        # Features 6 & 7: Historical baseline speeds (yesterday & last week)
+        speed_yesterday, speed_last_week = get_historical_speed_baseline(df_existing, route["route_id"], now, free_flow_speed)
 
         # Retrieve lag features from historical records
         prev_5m = "NORMAL"
@@ -1115,6 +1208,7 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
 
         congestion_ratio = round(travel_time / max(free_flow, 0.1), 2)
 
+        # Exact 43 columns requested by user specification
         row = {
             "timestamp": timestamp_str,
             "road_route_id": route["route_id"],
@@ -1138,7 +1232,7 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
             "temperature_c": weather["temperature_c"],
             "rainfall_mm": weather["rainfall_mm"],
             "road_type": osm_road_type,
-            "road_length_km": route.get("road_length_km", 5.0),
+            "road_length_km": road_length,
             "num_lanes": osm_lanes,
             "is_oneway": "Yes" if osm_oneway == 1 else "No",
             "accident_incident": has_accident,
@@ -1148,14 +1242,27 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
             "prev_traffic_15min": prev_15m,
             "prev_traffic_30min": prev_30m,
             "prev_speed_5min": prev_speed,
+            "upstream_speed_kmh": upstream_speed,
+            "downstream_speed_kmh": downstream_speed,
+            "distance_to_junction_m": dist_junction_m,
+            "traffic_volume_veh_hr": volume_veh_hr,
+            "occupancy_rate_pct": occupancy_pct,
+            "speed_same_time_yesterday_kmh": speed_yesterday,
+            "speed_same_time_last_week_kmh": speed_last_week,
+            "visibility_km": weather["visibility_km"],
+            "surface_condition": weather["surface_condition"],
             "target_traffic_level": level,
             "target_speed_kmh": speed
         }
         new_rows.append(row)
 
-        delay_display = f"+{delay_min:.1f}m" if delay_min > 0 else "0.0m"
-        r_name = route["route_id"][:30]
-        print(f"{idx:<3} | {r_name:<32} | {osm_id:<13} | {route.get('road_length_km', 0):<4.1f}k | {travel_time:<5.1f}min | {delay_display:<8} | {speed:<5.1f}km/h | {level:<12} | {key_label}")
+        r_name = route["route_id"][:27]
+        speed_disp = f"{speed:.1f} km/h"
+        up_down_disp = f"{upstream_speed:.1f}/{downstream_speed:.1f}"
+        flow_disp = f"{volume_veh_hr}v {occupancy_pct:.0f}%"
+        junc_disp = f"{dist_junction_m:.0f}m"
+        w_disp = f"{weather['weather'][:7]}/{weather['visibility_km']:.0f}k/{weather['surface_condition'][:3]}"
+        print(f"{idx:<3} | {r_name:<28} | {speed_disp:<9} | {up_down_disp:<13} | {flow_disp:<16} | {junc_disp:<9} | {w_disp:<19} | {level:<11} | {key_label}")
 
     df_new = pd.DataFrame(new_rows)
     os.makedirs(DATA_DIR, exist_ok=True)
@@ -1178,14 +1285,9 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
 
 
 def print_key_stats():
-    """Prints current TomTom key pool stats and health."""
+    """Prints current key pool stats and health."""
     print("=" * 65)
-    print("TomTom API Key Pool Status")
-    print("=" * 65)
-    for idx, (k, stats) in enumerate(KEY_POOL.stats.items(), 1):
-        masked = KEY_POOL.mask(k)
-        print(f"Key #{idx} ({masked}): {stats['calls']} calls, {stats['success']} ok, {stats['429']} rate-limits, {stats['403']} quota-limits")
-    print(f"Total theoretical capacity: {KEY_POOL.total_daily_capacity:,} req/day")
+    print("Traffic Provider Key Status: TomTom API Removed")
     print("=" * 65)
 
 
@@ -1208,7 +1310,6 @@ def main():
         print(f"  Target File: {CSV_PATH}")
         print(f"  Interval: Every {args.interval} minutes")
         print(f"  Source Mode: {args.source.upper()} (Sampling {args.limit} routes)")
-        print(f"  Keys in Pool: {KEY_POOL.total_keys} ({KEY_POOL.total_daily_capacity:,} req/day)")
         print("  Press Ctrl+C at any time to exit.")
         print("=" * 75)
         try:

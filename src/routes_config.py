@@ -1,8 +1,8 @@
 """
 Project Routes Configuration & Geo-Coordinate Registry
 ======================================================
-Defines all 45 official project corridors from data/traffic_prediction_routes.csv (R01 to R45).
-Includes high-precision coordinates for all 118 strategic nodes across Greater Dhaka,
+Defines all 50 official project corridors (R01 to R50).
+Includes high-precision coordinates for all strategic nodes across Greater Dhaka,
 Savar, Ashulia, Gazipur, Narayanganj, DIU, Mirpur, Uttara, and Old Dhaka.
 """
 
@@ -132,7 +132,18 @@ NODE_COORDINATES = {
     'Khamarbari': (23.7590, 90.3840),
     'Charabag': (23.8890, 90.3000),
     'Rokeya Sarani': (23.7920, 90.3720),
-    'Uttara': (23.8759, 90.3795)
+    'Uttara': (23.8759, 90.3795),
+    # New additions for R01-R50
+    'Kalshi Flyover': (23.8235, 90.3800),
+    'Zirabo Mor': (23.9050, 90.3010),
+    'Diabari Bridge': (23.8730, 90.3610),
+    'Gonosastho': (23.9230, 90.2520),
+    'Babubazar Bridge': (23.7100, 90.4015),
+    'Cantonment Board': (23.8190, 90.3965),
+    'Kataban': (23.7405, 90.3900),
+    'Mirpur 2': (23.8045, 90.3620),
+    'Kuril': (23.8197, 90.4190),
+    'Gazipur': (23.9980, 90.3780)
 }
 
 
@@ -145,20 +156,78 @@ def haversine_km(c1, c2):
     return R * 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
 
+OFFICIAL_PROJECT_ROUTES_DATA = [
+    ("R01", "ECB Chattor -> Kalshi Flyover -> Mirpur 12 -> Mirpur 10 -> Mirpur 1 -> Gabtoli"),
+    ("R02", "Savar Bus Stand -> Radio Colony -> C&B Mor -> Aminbazar -> Gabtoli -> Technical -> Asadgate"),
+    ("R03", "Ashulia Depot -> Zirabo Mor -> Baipail -> Nabinagar -> Savar Bazar"),
+    ("R04", "Uttara Rajlokkhi -> House Building -> Abdullahpur -> Tongi College Gate -> Gazipur Chowrasta"),
+    ("R05", "ECB Chattor -> Kuril Bisso Road -> Jamuna Future Park -> Notun Bazar"),
+    ("R06", "Mirpur 10 -> Kazipara -> Sheorapara -> Agargaon -> Farmgate -> Kawran Bazar -> Motijheel"),
+    ("R07", "Daffodil International University -> Khagan -> Birulia -> Diabari Bridge -> Uttara North"),
+    ("R08", "Uttara Sector 13 -> Diabari Metro Station -> Beribadh -> Gabtoli -> Shyamoli"),
+    ("R09", "ECB Chattor -> Mohakhali -> Farmgate -> Gulistan -> Sayedabad -> Jatrabari -> Signboard -> Narayanganj Chasara"),
+    ("R10", "Mirpur 12 -> Pallabi -> Mirpur 10 -> Rokeya Sarani -> Shyamoli -> Dhanmondi 27"),
+    ("R11", "Ashulia -> Zirabo -> Savar C&B -> Aminbazar -> Gabtoli"),
+    ("R12", "Uttara -> Airport -> Khilkhet -> Kuril Bisso Road -> Rampura Bridge -> Malibagh -> Motijheel"),
+    ("R13", "Savar Bazar -> Palli Bidyut -> Nabinagar -> Gonosastho -> Dhamrai Bus Stand"),
+    ("R14", "ECB Chattor -> Kalshi -> Uttara 3rd Phase -> Diabari -> Uttara Sector 18"),
+    ("R15", "Mohammadpur Town Hall -> Asad Gate -> Farmgate -> Kawran Bazar -> Shahbagh"),
+    ("R16", "Gulistan Zero Point -> Paltan -> Press Club -> High Court -> Motijheel"),
+    ("R17", "Jatrabari -> Mayor Hanif Flyover -> Gulistan -> Babubazar Bridge -> Keraniganj"),
+    ("R18", "Sadarghat -> Gulistan -> Chankharpul -> Dhaka University -> Shahbagh"),
+    ("R19", "Mirpur 14 -> Cantonment Board -> ECB Chattor -> Banani -> Mohakhali"),
+    ("R20", "Uttara Rajlokkhi -> Abdullahpur -> Tongi College Gate -> Kamarpara -> Dhour"),
+    ("R21", "Savar Cantonment -> EPZ -> Baipail -> Ashulia Model Town -> Zirabo"),
+    ("R22", "Daffodil International University -> Birulia -> Eastern Housing -> Technical -> Shyamoli -> Asadgate"),
+    ("R23", "Gulshan 2 -> Kakoli -> Mohakhali Flyover -> Farmgate -> Kataban -> Science Lab"),
+    ("R24", "Baridhara -> Jamuna Future Park -> Kuril Flyover -> Uttara Sector 1 -> House Building"),
+    ("R25", "Badda Link Road -> Rampura -> Moghbazar -> Kakrail -> Paltan"),
+    ("R26", "Mirpur 10 -> Kazipara -> Sheorapara -> Agargaon -> Bijoy Sarani -> Farmgate"),
+    ("R27", "Savar Bus Stand -> Hemayetpur -> Aminbazar -> Technical -> Shyamoli -> Mohammadpur"),
+    ("R28", "Ashulia Bridge -> Dhour -> Kamarpara -> Uttara North -> Diabari Metro Station"),
+    ("R29", "ECB Chattor -> Mirpur DOHS -> Pallabi -> Mirpur 12 -> Kalshi -> ECB Chattor"),
+    ("R30", "Motijheel -> Dainik Bangla -> Kakrail -> Malibagh -> Rampura -> Badda"),
+    ("R31", "Dhanmondi 27 -> Shyamoli -> Technical -> Gabtoli -> Savar -> Nabinagar"),
+    ("R32", "Uttara House Building -> Uttara Rajlokkhi -> Airport -> Khilkhet -> Kuril Bisso Road"),
+    ("R33", "Mirpur 1 -> Sony Cinema Hall -> Technical -> Asadgate -> Mohammadpur -> Dhanmondi"),
+    ("R34", "Ashulia Bazar -> Paragram -> Khagan -> Daffodil International University -> Birulia"),
+    ("R35", "Savar C&B Mor -> Kolma -> Zirabo -> Ashulia Depot -> EPZ -> Baipail"),
+    ("R36", "ECB Chattor -> Manik Miah Avenue -> Dhanmondi 27 -> Science Lab -> New Market"),
+    ("R37", "Tongi Station Road -> Uttara -> Airport -> Mohakhali -> Farmgate -> Gulistan"),
+    ("R38", "Narayanganj Chasara -> Signboard -> Jatrabari -> Gulistan -> Motijheel -> Paltan"),
+    ("R39", "Hemayetpur -> Aminbazar -> Technical -> Shyamoli -> Mohammadpur -> Dhanmondi 27"),
+    ("R40", "Diabari Metro Station -> Uttara North -> Dhour -> Tongi -> Gazipur Chowrasta"),
+    ("R41", "Mirpur 10 -> Mirpur 1 -> Gabtoli -> Aminbazar -> Savar -> C&B Mor"),
+    ("R42", "Gulshan 1 -> Mohakhali -> Jahangir Gate -> Khamarbari -> Farmgate -> Shahbagh"),
+    ("R43", "Uttara Sector 18 -> Diabari -> Beribadh -> Khagan -> Daffodil International University"),
+    ("R44", "Savar Bazar Road -> Nabinagar -> C&B Mor -> Kolma -> Charabag -> Ashulia"),
+    ("R45", "ECB Chattor -> Sheorapara -> Rokeya Sarani -> Mirpur 10 -> Mirpur 12 -> Uttara"),
+    ("R46", "Gulshan 2 -> Mohakhali -> Gabtoli -> Birulia -> Daffodil International University"),
+    ("R47", "Banani -> Kakoli -> Gulshan 1 -> Gulshan 2"),
+    ("R48", "Mirpur 2 -> Mirpur 10 -> Agargaon -> Farmgate -> Motijheel"),
+    ("R49", "Daffodil International University -> Khagan -> Beribadh -> Rampura -> Badda Link Road"),
+    ("R50", "Gulshan 2 -> Notun Bazar -> Kuril -> Uttara -> Gazipur")
+]
+
+
 def load_project_routes() -> list:
     """
-    Parses data/traffic_prediction_routes.csv and builds complete, validated
-    corridor objects with multi-point waypoints, Haversine distances, and TomTom formatted strings.
+    Builds complete, validated corridor objects with multi-point waypoints,
+    Haversine distances, and metadata for all 50 official corridors.
     """
-    if not os.path.exists(ROUTES_CSV):
-        return []
+    raw_list = []
+    if os.path.exists(ROUTES_CSV):
+        try:
+            df = pd.read_csv(ROUTES_CSV)
+            for _, row in df.iterrows():
+                raw_list.append((str(row["Route_ID"]).strip(), str(row["Route_Path"]).strip()))
+        except Exception:
+            raw_list = OFFICIAL_PROJECT_ROUTES_DATA
+    else:
+        raw_list = OFFICIAL_PROJECT_ROUTES_DATA
 
-    df = pd.read_csv(ROUTES_CSV)
     routes = []
-
-    for _, row in df.iterrows():
-        r_id = str(row["Route_ID"]).strip()
-        r_path = str(row["Route_Path"]).strip()
+    for r_id, r_path in raw_list:
         nodes = [n.strip() for n in r_path.split("->") if n.strip()]
 
         if len(nodes) < 2:
@@ -188,9 +257,6 @@ def load_project_routes() -> list:
         # Baseline free flow speed ~35-40 km/h in Dhaka uncongested hours
         free_flow_min = max(2.0, round((total_dist_km / 38.0) * 60, 1))
 
-        # TomTom multi-point location string: "lat1,lon1:lat2,lon2:lat3,lon3:..."
-        tomtom_locations = ":".join(f"{c[0][0]},{c[0][1]}" for c in coords_list)
-
         routes.append({
             "route_id": f"{r_id}: {orig_name} -> {dest_name}",
             "route_code": r_id,
@@ -200,7 +266,6 @@ def load_project_routes() -> list:
             "origin_coords": orig_coords,
             "dest_coords": dest_coords,
             "waypoints": coords_list,
-            "tomtom_locations": tomtom_locations,
             "road_length_km": total_dist_km,
             "free_flow_time_min": free_flow_min,
             "road_type": "Primary Urban",
@@ -210,5 +275,5 @@ def load_project_routes() -> list:
     return routes
 
 
-# Official Project Routes Instance (R01 to R45)
+# Official Project Routes Instance (R01 to R50)
 PROJECT_ROUTES = load_project_routes()

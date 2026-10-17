@@ -1,4 +1,4 @@
-Collect Data - @Fathum 
+Waze + HERE api Integration - @Fathum 
 
 Frontend - @Rohan 
 
