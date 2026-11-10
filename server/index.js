@@ -9,6 +9,9 @@ import {
   loadTrafficData,
   evaluateAlternativeRoutes,
   simulatePrediction,
+  predictJourneyService,
+  getLiveWeatherService,
+  getEngineStatusService,
   getGeoJsonRoadSummary
 } from './trafficService.js';
 import { NODE_COORDINATES, DHAKA_BYPASS_WAYPOINTS } from './routesConfig.js';
@@ -17,7 +20,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Load root .env if present
-dotenv.config({ path: path.resolve(__dirname, '../../.env') });
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -178,6 +181,38 @@ app.post('/api/predict', (req, res) => {
     const inputs = req.body || {};
     const prediction = simulatePrediction(inputs);
     res.json({ success: true, data: prediction });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7b. Day/Date, Time, From, To Journey Predictor & Alternative Route Advisor
+// Powered by Google Maps Routes API v2 + OpenWeatherMap API + OSM Network
+app.post('/api/predict-journey', async (req, res) => {
+  try {
+    const { date, day, time, from, to } = req.body || {};
+    const result = await predictJourneyService({ date, day, time, from, to });
+    res.json({ success: true, data: result });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7c. Live Weather from OpenWeatherMap API
+app.get('/api/weather', async (req, res) => {
+  try {
+    const weather = await getLiveWeatherService();
+    res.json({ success: true, data: weather });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 7d. Engine Telemetry & API Key Status
+app.get('/api/engine-status', (req, res) => {
+  try {
+    const status = getEngineStatusService();
+    res.json({ success: true, data: status });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

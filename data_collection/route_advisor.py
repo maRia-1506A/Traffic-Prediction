@@ -37,9 +37,12 @@ if os.path.exists(env_file):
 
 # Import Key Pool, OSM Network and Official Routes
 try:
-    from src.collect_data import KEY_POOL, OSM_NETWORK, ROUTES, get_live_weather
+    from data_collection.collect_data import KEY_POOL, OSM_NETWORK, ROUTES, get_live_weather
 except ImportError:
-    from collect_data import KEY_POOL, OSM_NETWORK, ROUTES, get_live_weather
+    try:
+        from collect_data import KEY_POOL, OSM_NETWORK, ROUTES, get_live_weather
+    except ImportError:
+        KEY_POOL, OSM_NETWORK, ROUTES, get_live_weather = [], None, [], None
 
 # Known Dhaka Strategic Bypass Points & Flyovers (from OSM Road Network)
 DHAKA_BYPASS_WAYPOINTS = [

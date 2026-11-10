@@ -63,11 +63,15 @@ export default function TrafficMap({ routes = [], selectedRoute, onSelectRoute, 
         zoomControl: true,
       });
 
-      // CartoDB Dark Matter Tiles (high contrast, ultra dark)
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-        subdomains: 'abcd',
-        maxZoom: 20
+      // Esri Dark Gray Canvas Tiles (100% Free, No Watermark, No API Key Required)
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+        attribution: '&copy; <a href="https://www.esri.com/">Esri</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        maxZoom: 16
+      }).addTo(map);
+
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
+        maxZoom: 16,
+        opacity: 0.85
       }).addTo(map);
 
       layerGroupRef.current = L.layerGroup().addTo(map);

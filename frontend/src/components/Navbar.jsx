@@ -8,11 +8,14 @@ import {
   Cpu,
   RefreshCw,
   CloudSun,
-  ShieldAlert
+  ShieldAlert,
+  Zap,
+  Car
 } from 'lucide-react';
 
 export default function Navbar({ activeTab, setActiveTab, onRefresh, loading, stats }) {
   const tabs = [
+    { id: 'journey', label: 'Traffic Predictor', icon: Car, featured: true },
     { id: 'map', label: 'Live Map & Overview', icon: MapPin },
     { id: 'routes', label: '50 Corridors (R01-R50)', icon: Navigation },
     { id: 'advisor', label: 'Jam Bypass Advisor', icon: Compass },

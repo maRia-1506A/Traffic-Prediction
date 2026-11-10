@@ -211,7 +211,7 @@ OPENWEATHERMAP_API_KEY = os.getenv("OPENWEATHERMAP_API_KEY", "")
 OSM_NETWORK = OSMRoadNetwork(GEOJSON_PATH)
 
 try:
-    from src.traffic_clients import DualTrafficEngine
+    from data_collection.traffic_clients import DualTrafficEngine
 except ImportError:
     try:
         from traffic_clients import DualTrafficEngine
@@ -224,7 +224,7 @@ TRAFFIC_ENGINE = DualTrafficEngine() if DualTrafficEngine else None
 # 1. Route Configuration (Official Project Corridors R01 to R50)
 # ---------------------------------------------------------
 try:
-    from src.routes_config import PROJECT_ROUTES
+    from data_collection.routes_config import PROJECT_ROUTES
 except ImportError:
     try:
         from routes_config import PROJECT_ROUTES

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
+import TrafficJourneyPredictor from './components/TrafficJourneyPredictor';
 import MetricsOverview from './components/MetricsOverview';
 import TrafficMap from './components/TrafficMap';
 import RoutesList from './components/RoutesList';
@@ -11,7 +12,7 @@ import { fetchStats, fetchRoutes, fetchWaypoints } from './api';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState('map');
+  const [activeTab, setActiveTab] = useState('journey');
   const [stats, setStats] = useState(null);
   const [routes, setRoutes] = useState([]);
   const [waypoints, setWaypoints] = useState([]);
@@ -86,6 +87,14 @@ export default function App() {
               setSelectedRoute(r);
               setActiveTab('map');
             }}
+          />
+        )}
+
+        {/* Tab 0: Primary Traffic Journey Predictor (Day/Date, Time, From, To, High/Low/Med, Alternative Route) */}
+        {activeTab === 'journey' && (
+          <TrafficJourneyPredictor
+            onExploreCorridors={() => setActiveTab('routes')}
+            onOpenMap={() => setActiveTab('map')}
           />
         )}
 
