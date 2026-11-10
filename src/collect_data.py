@@ -1159,6 +1159,7 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
     if os.path.exists(CSV_PATH) and os.path.getsize(CSV_PATH) > 0:
         try:
             df_existing = pd.read_csv(CSV_PATH)
+            df_existing.columns = df_existing.columns.str.strip()
         except Exception:
             df_existing = pd.DataFrame()
 
@@ -1294,6 +1295,7 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
     if os.path.exists(CSV_PATH) and os.path.getsize(CSV_PATH) > 0:
         try:
             df_old = pd.read_csv(CSV_PATH)
+            df_old.columns = df_old.columns.str.strip()
             df_combined = pd.concat([df_old, df_new], ignore_index=True)
             df_combined.to_csv(CSV_PATH, index=False)
         except Exception:
@@ -1311,7 +1313,16 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
 def print_key_stats():
     """Prints current key pool stats and health."""
     print("=" * 65)
-    print("Traffic Provider Key Status: TomTom API Removed")
+    print("Traffic Provider Key Status:")
+    if TRAFFIC_ENGINE and hasattr(TRAFFIC_ENGINE, "google"):
+        client = TRAFFIC_ENGINE.google
+        print(f"  Google Maps Routes API Keys Active: {client.total_keys}")
+        for idx, k in enumerate(client.keys, 1):
+            st = client.stats.get(k, {})
+            print(f"    Key #{idx}: {client.mask_key(k)} | Calls: {st.get('calls', 0)} | Success: {st.get('success', 0)} | Errors: {st.get('errors', 0)}")
+    else:
+        print("  Google Maps Engine: Not initialized")
+    print(f"  Waze Live Map Engine: Enabled (Zero-Key Crowdsourced Fallback)")
     print("=" * 65)
 
 

@@ -99,40 +99,60 @@ class GoogleRoutesClient:
     """
     Fetches real-time routing and flow traffic from Google Maps Routes API (v2:computeRoutes).
     Provides superior traffic coverage and congestion metrics across Greater Dhaka.
+    Supports multi-key pooling with round-robin load distribution and automatic failover.
     """
     URL = "https://routes.googleapis.com/directions/v2:computeRoutes"
     FIELD_MASK = "routes.duration,routes.staticDuration,routes.distanceMeters"
 
-    def __init__(self, api_key: str = None, timeout: int = 8):
-        self.api_key = api_key or os.getenv("GOOGLE_MAPS_API_KEY", "")
+    def __init__(self, api_keys = None, timeout: int = 8):
+        self.keys = []
+        raw = []
+        if isinstance(api_keys, list):
+            raw.extend(api_keys)
+        elif isinstance(api_keys, str) and api_keys.strip():
+            raw.extend(api_keys.split(","))
+        else:
+            for env_var in ["GOOGLE_MAPS_API_KEYS", "GOOGLE_MAPS_API_KEY"]:
+                val = os.getenv(env_var, "")
+                if val:
+                    raw.extend(val.split(","))
+
+        # Clean and deduplicate while preserving order
+        seen = set()
+        for k in raw:
+            k_clean = k.strip().strip("\"'")
+            if k_clean and k_clean.startswith("AIza") and k_clean not in seen:
+                self.keys.append(k_clean)
+                seen.add(k_clean)
+
+        self.index = 0
         self.timeout = timeout
+        self.stats = {k: {"calls": 0, "success": 0, "errors": 0} for k in self.keys}
 
     @property
     def is_configured(self) -> bool:
-        return bool(self.api_key and self.api_key.strip() and self.api_key.startswith("AIza"))
+        return len(self.keys) > 0
+
+    @property
+    def total_keys(self) -> int:
+        return len(self.keys)
+
+    def mask_key(self, key: str) -> str:
+        if not key or len(key) < 10:
+            return "N/A"
+        return f"{key[:6]}...{key[-4:]}"
 
     def get_route_traffic(self, origin_coords: tuple, dest_coords: tuple) -> dict:
         """
         Queries Google Routes API for live traffic state.
-        Returns dict with:
-          - success: bool
-          - travel_time_min: float
-          - free_flow_time_min: float
-          - traffic_delay_min: float
-          - distance_km: float
-          - speed_kmh: float
+        Rotates keys across requests and automatically fails over if a key hits quota or rate limits.
         """
         if not self.is_configured:
-            return {"success": False, "error": "GOOGLE_MAPS_API_KEY not configured", "source": "Google"}
+            return {"success": False, "error": "No GOOGLE_MAPS_API_KEY configured", "source": "Google"}
 
         orig_lat, orig_lon = origin_coords
         dest_lat, dest_lon = dest_coords
 
-        headers = {
-            "Content-Type": "application/json",
-            "X-Goog-Api-Key": self.api_key.strip(),
-            "X-Goog-FieldMask": self.FIELD_MASK
-        }
         body = {
             "origin": {"location": {"latLng": {"latitude": orig_lat, "longitude": orig_lon}}},
             "destination": {"location": {"latLng": {"latitude": dest_lat, "longitude": dest_lon}}},
@@ -140,37 +160,68 @@ class GoogleRoutesClient:
             "routingPreference": "TRAFFIC_AWARE"
         }
 
-        try:
-            res = requests.post(self.URL, json=body, headers=headers, timeout=self.timeout)
-            if res.status_code == 200:
-                data = res.json()
-                routes = data.get("routes", [])
-                if routes:
-                    r = routes[0]
-                    duration_str = r.get("duration", "0s").rstrip("s")
-                    static_str = r.get("staticDuration", duration_str).rstrip("s")
-                    duration_sec = float(duration_str) if duration_str else 0.0
-                    static_sec = float(static_str) if static_str else duration_sec
-                    length_m = float(r.get("distanceMeters", 0))
+        num_keys = len(self.keys)
+        start_idx = self.index
+        last_error = "Unknown error"
 
-                    travel_time_min = round(duration_sec / 60.0, 1)
-                    free_flow_min = max(round(static_sec / 60.0, 1), 1.0)
-                    delay_min = max(0.0, round((duration_sec - static_sec) / 60.0, 1))
-                    dist_km = max(round(length_m / 1000.0, 2), 0.5)
-                    speed_kmh = round(dist_km / max(travel_time_min / 60.0, 0.01), 1)
+        # Attempt up to num_keys (automatic failover across the pool)
+        for attempt in range(num_keys):
+            curr_idx = (start_idx + attempt) % num_keys
+            api_key = self.keys[curr_idx]
+            self.stats[api_key]["calls"] += 1
 
-                    return {
-                        "success": True,
-                        "source": "Google",
-                        "travel_time_min": travel_time_min,
-                        "free_flow_time_min": free_flow_min,
-                        "traffic_delay_min": delay_min,
-                        "distance_km": dist_km,
-                        "speed_kmh": speed_kmh
-                    }
-            return {"success": False, "error": f"Google status {res.status_code}: {res.text}", "source": "Google"}
-        except Exception as e:
-            return {"success": False, "error": str(e), "source": "Google"}
+            headers = {
+                "Content-Type": "application/json",
+                "X-Goog-Api-Key": api_key,
+                "X-Goog-FieldMask": self.FIELD_MASK
+            }
+
+            try:
+                res = requests.post(self.URL, json=body, headers=headers, timeout=self.timeout)
+                if res.status_code == 200:
+                    data = res.json()
+                    routes = data.get("routes", [])
+                    if routes:
+                        r = routes[0]
+                        duration_str = r.get("duration", "0s").rstrip("s")
+                        static_str = r.get("staticDuration", duration_str).rstrip("s")
+                        duration_sec = float(duration_str) if duration_str else 0.0
+                        static_sec = float(static_str) if static_str else duration_sec
+                        length_m = float(r.get("distanceMeters", 0))
+
+                        travel_time_min = round(duration_sec / 60.0, 1)
+                        free_flow_min = max(round(static_sec / 60.0, 1), 1.0)
+                        delay_min = max(0.0, round((duration_sec - static_sec) / 60.0, 1))
+                        dist_km = max(round(length_m / 1000.0, 2), 0.5)
+                        speed_kmh = round(dist_km / max(travel_time_min / 60.0, 0.01), 1)
+
+                        self.stats[api_key]["success"] += 1
+                        # Advance round-robin pointer for next call
+                        self.index = (curr_idx + 1) % num_keys
+
+                        return {
+                            "success": True,
+                            "source": "Google",
+                            "key_index": curr_idx + 1,
+                            "key_mask": self.mask_key(api_key),
+                            "travel_time_min": travel_time_min,
+                            "free_flow_time_min": free_flow_min,
+                            "traffic_delay_min": delay_min,
+                            "distance_km": dist_km,
+                            "speed_kmh": speed_kmh
+                        }
+                    else:
+                        last_error = "No route found in Google response"
+                else:
+                    self.stats[api_key]["errors"] += 1
+                    last_error = f"Google status {res.status_code}: {res.text[:120]}"
+                    if res.status_code in (429, 403) and num_keys > 1:
+                        print(f"  [Google KeyPool] Key #{curr_idx + 1} ({self.mask_key(api_key)}) error ({res.status_code}). Rotating to next key...")
+            except Exception as e:
+                self.stats[api_key]["errors"] += 1
+                last_error = str(e)
+
+        return {"success": False, "error": last_error, "source": "Google"}
 
 
 class DualTrafficEngine:
@@ -178,12 +229,12 @@ class DualTrafficEngine:
     Unified Traffic Engine combining Google Maps Routes API with Waze Live backup.
     
     Features:
-      - Primary Live Engine: Google Maps Routes API (Highest precision for Dhaka roads)
+      - Primary Live Engine: Google Maps Routes API (Multi-key pool with automatic failover)
       - Crowdsourced Backup: Waze Live mobile probes (unlimited, zero-key failover)
       - Calibrated Offline Simulation: Graceful fallback when network is unavailable
     """
-    def __init__(self, google_api_key: str = None, *args, **kwargs):
-        self.google = GoogleRoutesClient(google_api_key)
+    def __init__(self, google_api_keys = None, *args, **kwargs):
+        self.google = GoogleRoutesClient(google_api_keys)
         self.waze = WazeTrafficClient()
 
     def fetch_live_traffic(self, route: dict, now: datetime.datetime, weather: dict) -> dict:
@@ -212,7 +263,8 @@ class DualTrafficEngine:
             free_flow = google_res["free_flow_time_min"]
             delay = google_res["traffic_delay_min"]
             speed = google_res["speed_kmh"]
-            source_label = "Google Routes Live"
+            key_idx = google_res.get("key_index", 1)
+            source_label = f"Google Routes Live (K{key_idx})"
 
         # Case B: Waze Live crowdsourced fallback
         elif waze_ok:
