@@ -1,3 +1,9 @@
+# Dependencies & Builds
+node_modules/
+dist/
+dist-ssr/
+*.local
+
 # Environment variables and API keys
 .env
 *.env
