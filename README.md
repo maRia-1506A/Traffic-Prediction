@@ -1,99 +1,97 @@
 # Dhaka Traffic Prediction & Congestion Bypass Machine
 
-An intelligent traffic prediction, road network mapping, and alternative route advisory system combining **OpenStreetMap (Overpass API)** for real road topology, live weather, and dynamic machine learning features.
+An AI-driven real-time traffic prediction and congestion bypass application for Greater Dhaka. Combines Google Maps Routes API v2, Waze Live crowdsourced probes, OpenWeatherMap real-time weather telemetry, and OpenStreetMap road topologies.
 
 ---
 
-## 📁 Repository Structure
+## 📁 Project Architecture & Clean Folder Structure
 
 ```
 Traffic-Prediction/
+├── frontend/                          # 🌐 React 19 + Vite Frontend Application
+│   ├── public/                        # Static assets (favicons, icons)
+│   ├── src/                           # Pure React source code
+│   │   ├── assets/                    # Images and logos
+│   │   ├── components/                # UI components (Predictor, Map, KPIs, etc.)
+│   │   │   ├── TrafficJourneyPredictor.jsx # Primary Day/Date, Time, From, To predictor
+│   │   │   ├── JourneyRouteMap.jsx    # Interactive Leaflet route topology visualizer
+│   │   │   ├── TrafficMap.jsx         # Full Dhaka 50 corridors map
+│   │   │   ├── MetricsOverview.jsx    # Network stats & KPIs
+│   │   │   ├── RoutesList.jsx         # Corridors explorer (R01-R50)
+│   │   │   ├── RouteAdvisor.jsx       # Jam bypass advisor
+│   │   │   ├── PredictorView.jsx      # What-If ML simulator
+│   │   │   ├── HistoryAnalytics.jsx   # Dataset explorer
+│   │   │   └── Navbar.jsx             # Top bar with live weather & engine status
+│   │   ├── utils/                     # Client-side route matching & prediction engine
+│   │   │   ├── journeyPredictor.js    # Subpath extractor, BFS pathfinding & delay model
+│   │   │   └── dhakaRoutesData.js     # 128 Dhaka nodes & 50 official corridors
+│   │   ├── api.js                     # Frontend API service connecting to backend
+│   │   ├── App.jsx                    # Root application component
+│   │   └── main.jsx                   # Vite entry point
+│   ├── index.html                     # HTML root template
+│   ├── vite.config.js                 # Vite + Tailwind v4 + proxy configuration
+│   └── package.json                   # Frontend npm metadata
 │
-├── .env                         # API Keys (Weather)
-├── requirements.txt             # Python project dependencies
-├── README.md                    # Project documentation & usage guide
-├── Prsent_Task.md               # Team task allocations
+├── server/                            # 🚀 Node.js Express API Backend
+│   ├── index.js                       # Express server (port 5000)
+│   ├── trafficService.js              # Traffic simulation, delay modeling & corridor resolver
+│   ├── routesConfig.js                # JS registry of 128 Dhaka nodes & 50 official routes
+│   └── apiClients.js                  # Google Maps multi-key pool & OpenWeather client
 │
-├── src/                         # Core Machine Engine
-│   ├── __init__.py              # Core package initialization
-│   ├── collect_data.py          # Unified Collector (OSM Road Topology + Weather)
-│   ├── fetch_roads.py           # Overpass API client for fetching OSM road network
-│   ├── route_advisor.py         # Excessive Jam Alternative Route Suggester & Bypass Engine
-│   ├── routes_config.py         # 50 official corridor definitions and GPS coordinates
-│   ├── unified_call.py          # 3-in-1 unified data fusion pipeline
-│   └── generate_history.py      # Historical traffic synthesizer for bootstrap ML training
+├── data_collection/                   # 🐍 Python Data Gathering & Scraper Pipeline
+│   ├── collect_data.py                # Live traffic data collector (Google / Waze / OpenWeather)
+│   ├── traffic_clients.py             # Dual traffic client classes (Google + Waze)
+│   ├── route_advisor.py               # Alternative bypass & congestion CLI advisor
+│   ├── routes_config.py               # 50 Dhaka commuter corridors & GPS coordinates
+│   ├── fetch_roads.py                 # Overpass OSM road topology extractor
+│   ├── generate_history.py            # Historical dataset synthesizer
+│   ├── unified_call.py                # CLI runner for traffic clients
+│   ├── requirements.txt               # Python package dependencies
+│   └── README.md                      # Python scripts documentation
 │
-├── data/                        # Datasets & Graph Topology
-│   ├── dhaka_roads.geojson      # OSM road segments with geometries, lane counts & tags
-│   ├── traffic_prediction_routes.csv # 50 official corridor paths
-│   └── traffic_data.csv         # Structured dataset for Machine Learning models
+├── data/                              # 📊 Datasets & Topologies
+│   ├── traffic_data.csv               # Historical & real-time collected telemetry
+│   ├── traffic_prediction_routes.csv  # 50 Official Dhaka Corridors (R01 to R50)
+│   └── dhaka_roads.geojson            # OpenStreetMap Dhaka road topologies
 │
-└── tools/                       # Utilities & Diagnostic Dashboards
-    ├── show_traffic.py          # Live auto-refreshing terminal traffic dashboard
-    ├── show_roads.py            # Interactive OSM road network browser
-    ├── analyze_geojson.py       # GeoJSON properties & highway coverage inspector
-    └── test_weather_key.py      # OpenWeatherMap API key verification
+├── .env                               # API keys (Google Maps & OpenWeatherMap)
+├── .gitignore                         # Exclusions (node_modules, dist, .env)
+└── package.json                       # Root package.json with unified execution scripts
 ```
 
 ---
 
-## 🗺️ Dual Traffic Engine (Google Maps Routes API + Waze)
+## ⚡ Quick Start
 
-The system features a **High-Precision Dual-Engine Architecture** for real-time congestion accuracy:
-1. **Google Maps Routes API v2** (Primary):
-   - High-precision live travel durations, traffic congestion delays, and road segment speeds.
-   - Configured via `GOOGLE_MAPS_API_KEY` in `.env`.
-2. **Waze Live Engine** (Backup):
-   - Queries real-time crowdsourced smartphone probe speeds and jam delays across Dhaka.
-   - Requires zero API keys or credit card registration.
-3. **Consensus & Multi-Source Fusion**:
-   - Primary live traffic from Google Maps with zero-downtime automatic failover to Waze.
-   - Binds physical geometry from **OpenStreetMap (`dhaka_roads.geojson`)** and live weather from **OpenWeatherMap**.
-   - Graceful fallback to calibrated Dhaka traffic simulation if fully offline.
+### 1. Install Dependencies
+```bash
+# Node.js dependencies
+npm install
 
----
+# Python dependencies (for data collection pipeline)
+pip install -r data_collection/requirements.txt
+```
 
-## 🚀 How to Run
+### 2. Configure API Keys (`.env`)
+Create or edit `.env` in the root directory:
+```env
+# Google Maps Routes API v2 (supports multi-key pooling separated by comma)
+GOOGLE_MAPS_API_KEYS=YOUR_GOOGLE_KEY_1,YOUR_GOOGLE_KEY_2
+GOOGLE_MAPS_API_KEY=YOUR_GOOGLE_KEY_1
 
-### 1. Collect Real-Time Training Data
-- **One-shot snapshot across commuter corridors**:
-  ```bash
-  py -3 src/collect_data.py
-  ```
-- **Continuous 24/7 background collector (e.g. every 10 mins)**:
-  ```bash
-  py -3 src/collect_data.py --loop --interval 10
-  ```
-- **Collect directly for major OpenStreetMap road segments**:
-  ```bash
-  py -3 src/collect_data.py --source osm --limit 50
-  ```
+# OpenWeatherMap API Key
+OPENWEATHERMAP_API_KEY=YOUR_OPENWEATHER_KEY
+```
 
-### 2. Suggest Alternative Routes on Excessive Jam
-When excessive traffic jams or severe delays occur, the Route Advisor evaluates candidate OSM bypass waypoints (Elevated Expressway, Kalshi Flyover, Hatirjheel, etc.) to calculate exact travel time savings:
-- **Check a specific route**:
-  ```bash
-  py -3 src/route_advisor.py --route "Mirpur 10 -> Farmgate"
-  ```
-- **Custom Origin and Destination coordinates**:
-  ```bash
-  py -3 src/route_advisor.py --origin 23.8069,90.3687 --dest 23.7570,90.3888
-  ```
-- **Adjust delay sensitivity threshold (minutes)**:
-  ```bash
-  py -3 src/route_advisor.py --route "Uttara -> Mohakhali" --threshold 2.0
-  ```
+### 3. Run the Entire System
+```bash
+# Starts both the Node.js API server (port 5000) and React Vite (port 3000)
+npm run dev:all
+```
 
-### 3. Monitoring & Dashboards
-- **Live Terminal Traffic Dashboard**:
-  ```bash
-  py -3 tools/show_traffic.py
-  ```
-- **Inspect OpenStreetMap Road Network**:
-  ```bash
-  py -3 tools/show_roads.py --named
-  ```
-- **Analyze GeoJSON Road Coverage**:
-  ```bash
-  py -3 tools/analyze_geojson.py
-  ```
+Or run services individually:
+- **Frontend only**: `npm run dev` (opens on `http://localhost:3000`)
+- **Backend API only**: `npm run server` (runs on `http://localhost:5000`)
+- **Production Build**: `npm run build` (builds frontend to `dist/`)
+- **Run Python Data Collector**: `npm run data:collect`
+- **Run Python Route Advisor CLI**: `npm run data:advisor`
