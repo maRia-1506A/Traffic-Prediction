@@ -763,10 +763,10 @@ export async function predictJourneyService({ date, day, time, from, to }) {
 
   const corridorRecords = matchedCorridor
     ? allHistoricalRecords.filter(r => {
-        const rawId = (r.road_route_id || '').trim();
-        return rawId.startsWith(matchedCorridor.route_code) ||
-          (rawId.toLowerCase().includes(fTrim.toLowerCase()) && rawId.toLowerCase().includes(tTrim.toLowerCase()));
-      })
+      const rawId = (r.road_route_id || '').trim();
+      return rawId.startsWith(matchedCorridor.route_code) ||
+        (rawId.toLowerCase().includes(fTrim.toLowerCase()) && rawId.toLowerCase().includes(tTrim.toLowerCase()));
+    })
     : [];
 
   for (const rec of corridorRecords) {
@@ -872,34 +872,17 @@ export async function predictJourneyService({ date, day, time, from, to }) {
     }
   }
 
-  // 6. Traffic Prediction Level: "High", "Medium", "Low" calibrated to empirical dataset
+  // 6. Traffic Prediction Level: "High", "Medium", "Low"
   let trafficPrediction = 'Low';
-=======
-  // 6. Traffic Prediction Level helper: "High", "Medium", "Low"
-  const classifyTrafficLevel = (mult, delay, speed) => {
-    if (mult >= 2.1 || delay >= 15.0 || speed < 14.0) return 'High';
-    if (mult >= 1.35 || delay >= 4.0 || speed < 24.0) return 'Medium';
-    return 'Low';
-  };
-
-  let trafficPrediction = classifyTrafficLevel(totalMultiplier, delayMin, speedKmh);
->>>>>>> cf142b274bddb6505675782c38c6e560c0d4602e
   let badgeColor = 'emerald';
   let levelDescription = 'Roads are flowing freely with minimal stops. Good time to travel.';
 
-<<<<<<< HEAD
-  if (congestionRatio >= 1.85 || (speedKmh < 15.0 && delayMin >= 12.0)) {
+  if (totalMultiplier >= 2.1 || delayMin >= 15.0 || speedKmh < 14.0) {
     trafficPrediction = 'High';
     badgeColor = 'rose';
-    levelDescription = 'Severe traffic congestion and long queue delays expected. Allow extra time.';
-  } else if (congestionRatio >= 1.35 || (speedKmh < 23.0 && delayMin >= 5.0)) {
-    trafficPrediction = 'Medium';
-=======
-  if (trafficPrediction === 'High') {
-    badgeColor = 'rose';
     levelDescription = 'Severe traffic congestion and long queue delays expected.';
-  } else if (trafficPrediction === 'Medium') {
->>>>>>> cf142b274bddb6505675782c38c6e560c0d4602e
+  } else if (totalMultiplier >= 1.35 || delayMin >= 4.0 || speedKmh < 24.0) {
+    trafficPrediction = 'Medium';
     badgeColor = 'amber';
     levelDescription = 'Moderate traffic density with steady speed and periodic intersection queues.';
   }
@@ -925,51 +908,7 @@ export async function predictJourneyService({ date, day, time, from, to }) {
 
   const primaryCheckpoints = findRouteCheckpoints(primaryRoadCoords, fTrim, tTrim, corridorPathSteps);
 
-  // 7. Alternative Bypass Routes (Google Maps Routes API alternatives + OSM Flyover/Expressway Bypasses)
-  const alternativeRoutes = [];
-  const seenVia = new Set();
-
-  // 7a. Include real Google Maps Routes API alternative routes if returned
-  if (googleRouteData?.alternatives?.length) {
-    for (const gAlt of googleRouteData.alternatives.slice(0, 2)) {
-      const gAltCoords = gAlt.polyline ? decodeEncodedPolyline(gAlt.polyline) : [];
-      const altFreeFlow = gAlt.free_flow_time_min || freeFlowMin;
-      const altTt = isNow
-        ? gAlt.travel_time_min
-        : Number((altFreeFlow * Math.max(1.0, totalMultiplier * 0.92)).toFixed(1));
-      const altDelay = Math.max(0, Number((altTt - altFreeFlow).toFixed(1)));
-      const altSpeed = Math.max(5.0, Number((gAlt.distance_km / Math.max(altTt / 60.0, 0.05)).toFixed(1)));
-      const altLevel = classifyTrafficLevel(altTt / Math.max(altFreeFlow, 0.1), altDelay, altSpeed);
-      const timeSaved = Number((travelTimeMin - altTt).toFixed(1));
-      const rawDesc = (gAlt.description || '').trim();
-      const isAsciiShort = /^[\x20-\x7E]{1,30}$/.test(rawDesc);
-      const label = isAsciiShort ? rawDesc : `Alternate Corridor #${alternativeRoutes.length + 1}`;
-      seenVia.add(label.toLowerCase());
-
-      alternativeRoutes.push({
-        id: `alt-${alternativeRoutes.length + 1}`,
-        name: rawDesc || label,
-        via: label,
-        tag: 'Google Maps Alternative',
-        coords: gAltCoords.length >= 2 ? gAltCoords[Math.floor(gAltCoords.length / 2)] : null,
-        road_coords: gAltCoords.length >= 2 ? gAltCoords : osmPrimary.coordinates,
-        distance_km: gAlt.distance_km,
-        travel_time_min: altTt,
-        traffic_delay_min: altDelay,
-        time_saved_min: timeSaved,
-        bypass_speed_kmh: altSpeed,
-        traffic_prediction: altLevel,
-        google_maps_url: `https://www.google.com/maps/dir/?api=1&origin=${origCoords[0]},${origCoords[1]}&destination=${destCoords[0]},${destCoords[1]}&travelmode=driving`,
-        path: `${fTrim} -> ${label} -> ${tTrim}`,
-        steps: [fTrim, label, tTrim],
-        reason: rawDesc
-          ? `Alternative driving route via ${rawDesc} (Google Maps Routes API v2).`
-          : 'Alternative driving corridor returned by Google Maps Routes API v2.'
-      });
-    }
-  }
-
-  // 7b. Evaluate OSM strategic bypass waypoints
+  // 7. Alternative Bypass Routes via OSM Flyovers & Expressways
   const candidateBypasses = [];
   for (const wp of DHAKA_BYPASS_WAYPOINTS) {
     const d1 = haversineKm(origCoords, wp.coords);
@@ -1006,8 +945,8 @@ export async function predictJourneyService({ date, day, time, from, to }) {
           wp.tag === 'Expressway'
             ? 'High-speed elevated expressway corridor bypassing surface bottlenecks.'
             : wp.tag === 'Flyover'
-            ? 'Dedicated flyover bypass avoiding signal stops and intersection jams.'
-            : 'Secondary arterial corridor bypassing primary choke points.'
+              ? 'Dedicated flyover bypass avoiding signal stops and intersection jams.'
+              : 'Secondary arterial corridor bypassing primary choke points.'
       });
     }
   }
@@ -1100,49 +1039,6 @@ export async function predictJourneyService({ date, day, time, from, to }) {
       checkpoints: primaryCheckpoints
     },
     has_alternative: true,
-    alternative_route: bestAlt,
-    alternative_routes: alternativeRoutes
+    alternative_route: bestAlt
   };
-
-  if (journeyPredictionCache.size > 200) {
-    const oldestKey = journeyPredictionCache.keys().next().value;
-    journeyPredictionCache.delete(oldestKey);
-  }
-  journeyPredictionCache.set(cacheKey, { timestamp: nowMs, data: finalResult });
-
-  return finalResult;
-}
-
-// Cached OSM geometries for the 50 official monitored corridors
-let corridorGeometryCache = null;
-
-export function getMonitoredCorridorsOsmOverlay() {
-  const routes = getAllRoutesTelemetry();
-
-  if (!corridorGeometryCache) {
-    corridorGeometryCache = {};
-    for (const r of routes) {
-      const wpCoords = (r.waypoints || []).map(w => w.coords).filter(Boolean);
-      const osm = buildOsmRouteGeometry(wpCoords, r.route_id);
-      corridorGeometryCache[r.route_code] = osm.coordinates.length >= 2 ? osm.coordinates : wpCoords;
-    }
-  }
-
-  return routes.map(r => {
-    const raw = (r.traffic_level || 'NORMAL').toUpperCase();
-    let level = 'Low';
-    if (raw === 'SEVERE' || raw === 'HEAVY' || raw === 'TRAFFIC_JAM') level = 'High';
-    else if (raw === 'MODERATE' || raw === 'SLOW') level = 'Medium';
-
-    return {
-      route_code: r.route_code,
-      route_id: r.route_id,
-      traffic_level: level,
-      raw_level: raw,
-      speed_kmh: r.traffic_speed_kmh,
-      delay_min: r.traffic_delay_min,
-      last_updated: r.last_updated || 'CSV Telemetry',
-      coordinates: corridorGeometryCache[r.route_code] || r.waypoints.map(w => w.coords),
-    };
-  });
 }
