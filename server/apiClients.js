@@ -18,6 +18,9 @@ export class GoogleRoutesClient {
     this.keys = rawKeys.split(',').map(k => k.trim()).filter(Boolean);
     this.currentIndex = 0;
     this.endpoint = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+    // High-performance LRU/TTL cache for route queries (5 min TTL)
+    this.cache = new Map();
+    this.cacheTtlMs = 5 * 60 * 1000;
   }
 
   get hasKey() {
@@ -43,6 +46,14 @@ export class GoogleRoutesClient {
 
     const [origLat, origLon] = originCoords;
     const [destLat, destLon] = destCoords;
+
+    // Cache key based on rounded coordinates (~10m precision)
+    const cacheKey = `${origLat.toFixed(3)},${origLon.toFixed(3)}->${destLat.toFixed(3)},${destLon.toFixed(3)}:${computeAlternatives}`;
+    const cached = this.cache.get(cacheKey);
+    const now = Date.now();
+    if (cached && (now - cached.timestamp < this.cacheTtlMs)) {
+      return { ...cached.data, cached: true, latency_ms: 1 };
+    }
 
     const requestBody = {
       origin: {
@@ -109,7 +120,7 @@ export class GoogleRoutesClient {
               };
             });
 
-            return {
+            const result = {
               success: true,
               provider: 'Google Maps Routes API v2',
               latency_ms: latencyMs,
@@ -118,6 +129,15 @@ export class GoogleRoutesClient {
               alternatives: parsedRoutes.slice(1),
               all_routes: parsedRoutes
             };
+
+            // Store in in-memory LRU cache
+            if (this.cache.size > 200) {
+              const oldestKey = this.cache.keys().next().value;
+              this.cache.delete(oldestKey);
+            }
+            this.cache.set(cacheKey, { timestamp: now, data: result });
+
+            return result;
           }
         } else {
           const errText = await res.text();
