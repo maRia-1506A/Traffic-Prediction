@@ -3,226 +3,180 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { NODE_COORDINATES } from '../utils/dhakaRoutesData.js';
 
-const createCustomPin = (color, text = '') => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="${color}" stroke="#0b0f19" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-    <circle cx="12" cy="10" r="3.5" fill="#ffffff"></circle>
+// ── Pin helpers ───────────────────────────────────────────────────────────────
+const createPin = (color, label = '') => {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+    fill="${color}" stroke="#fff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+    <circle cx="12" cy="10" r="3" fill="#fff"/>
   </svg>`;
   return L.divIcon({
-    className: 'custom-route-marker',
-    html: `<div style="transform: translate(-13px, -26px); cursor: pointer;" title="${text}">${svg}</div>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 26],
-    popupAnchor: [0, -26]
+    className: '',
+    html: `<div title="${label}" style="transform:translate(-14px,-28px)">${svg}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 28],
+    popupAnchor: [0, -28],
   });
 };
 
 const createBypassPin = (name = '') => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="#38bdf8" stroke="#0f172a" stroke-width="2">
-    <circle cx="12" cy="12" r="10"></circle>
-    <path d="m12 8 4 4-4 4M8 12h8" stroke="#0f172a" stroke-width="2.5"></path>
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+    fill="#2563eb" stroke="#fff" stroke-width="2">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="m12 8 4 4-4 4M8 12h8" stroke="#fff" stroke-width="2"/>
   </svg>`;
   return L.divIcon({
-    className: 'bypass-route-marker',
-    html: `<div style="transform: translate(-13px, -13px); cursor: pointer;" title="${name}">${svg}</div>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13],
-    popupAnchor: [0, -13]
+    className: '',
+    html: `<div title="${name}" style="transform:translate(-12px,-12px)">${svg}</div>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+    popupAnchor: [0, -12],
   });
 };
 
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function JourneyRouteMap({
   fromLocation,
   toLocation,
   primaryRoute,
   alternativeRoute,
   showAlternative = false,
-  trafficPrediction = 'High'
+  trafficPrediction = 'Low',
 }) {
-  const mapContainerRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const routeLayerGroupRef = useRef(null);
+  const containerRef    = useRef(null);
+  const mapRef          = useRef(null);
+  const layerGroupRef   = useRef(null);
 
-  // Initialize Map
+  // Init map once
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    if (!containerRef.current || mapRef.current) return;
 
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        center: [23.8103, 90.4125],
-        zoom: 12,
-        zoomControl: true,
-        attributionControl: false
-      });
+    const map = L.map(containerRef.current, {
+      center: [23.8103, 90.4125],
+      zoom: 12,
+      zoomControl: true,
+      attributionControl: true,
+    });
 
-      // Free Dark Map Layer (Esri Dark Gray Base + Reference Labels - 100% Free, No Key Required)
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 16,
-        attribution: '&copy; Esri & OpenStreetMap contributors'
-      }).addTo(map);
+    // Free OpenStreetMap light tiles — no API key needed
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    }).addTo(map);
 
-      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}', {
-        maxZoom: 16,
-        opacity: 0.85
-      }).addTo(map);
-
-      routeLayerGroupRef.current = L.layerGroup().addTo(map);
-      mapInstanceRef.current = map;
-    }
+    layerGroupRef.current = L.layerGroup().addTo(map);
+    mapRef.current = map;
 
     return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
+      map.remove();
+      mapRef.current = null;
     };
   }, []);
 
-  // Update Route Layers
+  // Update layers when route changes
   useEffect(() => {
-    const map = mapInstanceRef.current;
-    const layerGroup = routeLayerGroupRef.current;
-    if (!map || !layerGroup) return;
+    const map = mapRef.current;
+    const lg  = layerGroupRef.current;
+    if (!map || !lg) return;
 
-    layerGroup.clearLayers();
+    lg.clearLayers();
 
-    // Resolve Origin and Destination Coordinates
-    const origCoords =
-      primaryRoute?.origin_coords ||
-      NODE_COORDINATES[fromLocation] || [23.8069, 90.3687];
-    const destCoords =
-      primaryRoute?.dest_coords ||
-      NODE_COORDINATES[toLocation] || [23.7570, 90.3888];
+    const origCoords = primaryRoute?.origin_coords || NODE_COORDINATES[fromLocation] || [23.8069, 90.3687];
+    const destCoords = primaryRoute?.dest_coords   || NODE_COORDINATES[toLocation]   || [23.7570, 90.3888];
+    const bounds     = [origCoords, destCoords];
 
-    const boundsPoints = [origCoords, destCoords];
+    // Origin marker
+    L.marker(origCoords, { icon: createPin('#16a34a', fromLocation) })
+      .bindPopup(`<b style="color:#15803d">From:</b> ${fromLocation}`)
+      .addTo(lg);
 
-    // 1. Origin Marker
-    const origMarker = L.marker(origCoords, {
-      icon: createCustomPin('#10b981', fromLocation)
-    }).bindPopup(
-      `<div style="color: #0f172a; font-size: 12px; font-weight: bold;">
-        <span style="color: #059669;">From:</span> ${fromLocation}
-      </div>`
-    );
-    layerGroup.addLayer(origMarker);
+    // Destination marker
+    L.marker(destCoords, { icon: createPin('#dc2626', toLocation) })
+      .bindPopup(`<b style="color:#dc2626">To:</b> ${toLocation}`)
+      .addTo(lg);
 
-    // 2. Destination Marker
-    const destMarker = L.marker(destCoords, {
-      icon: createCustomPin('#f43f5e', toLocation)
-    }).bindPopup(
-      `<div style="color: #0f172a; font-size: 12px; font-weight: bold;">
-        <span style="color: #e11d48;">To:</span> ${toLocation}
-      </div>`
-    );
-    layerGroup.addLayer(destMarker);
+    // Primary route colour
+    const primColor =
+      trafficPrediction === 'High'   ? '#ef4444' :
+      trafficPrediction === 'Medium' ? '#f59e0b' : '#22c55e';
 
-    // 3. Primary Route Polyline
-    // Collect coordinates along the path if intermediate nodes exist
-    const primaryPoints = [origCoords];
-    if (primaryRoute?.steps && primaryRoute.steps.length > 2) {
+    // Build primary path through intermediate steps
+    const primaryPts = [origCoords];
+    if (primaryRoute?.steps?.length > 2) {
       primaryRoute.steps.slice(1, -1).forEach(step => {
         if (NODE_COORDINATES[step]) {
-          primaryPoints.push(NODE_COORDINATES[step]);
-          boundsPoints.push(NODE_COORDINATES[step]);
+          primaryPts.push(NODE_COORDINATES[step]);
+          bounds.push(NODE_COORDINATES[step]);
         }
       });
     }
-    primaryPoints.push(destCoords);
+    primaryPts.push(destCoords);
 
-    let primaryColor = '#10b981'; // Green for Low
-    if (trafficPrediction === 'High') primaryColor = '#f43f5e'; // Red for High
-    else if (trafficPrediction === 'Medium') primaryColor = '#f59e0b'; // Amber for Medium
-
-    const primaryPolyline = L.polyline(primaryPoints, {
-      color: primaryColor,
-      weight: 5,
-      opacity: showAlternative ? 0.45 : 0.9,
-      lineCap: 'round',
-      lineJoin: 'round'
+    L.polyline(primaryPts, {
+      color:    primColor,
+      weight:   showAlternative ? 4 : 5,
+      opacity:  showAlternative ? 0.5 : 0.85,
+      lineCap:  'round',
+      lineJoin: 'round',
     }).bindPopup(
-      `<div style="color: #0f172a; font-size: 12px;">
-        <strong>Primary Route:</strong> ${primaryRoute?.name || 'Primary Corridor'}<br/>
-        <span>ETA: ${primaryRoute?.travel_time_min || 0} mins</span> • 
-        <span>Speed: ${primaryRoute?.speed_kmh || 0} km/h</span><br/>
-        <span style="color: ${primaryColor}; font-weight: bold;">Traffic: ${trafficPrediction}</span>
-      </div>`
-    );
-    layerGroup.addLayer(primaryPolyline);
+      `<b>Primary Route</b><br>${primaryRoute?.name || `${fromLocation} → ${toLocation}`}<br>` +
+      `ETA: ${primaryRoute?.travel_time_min ?? '—'} min · ${primaryRoute?.speed_kmh ?? '—'} km/h`
+    ).addTo(lg);
 
-    // 4. Alternative Route Polyline & Bypass Pin (when user clicked Yes)
+    // Alternative route
     if (showAlternative && alternativeRoute) {
       const bypassCoords = alternativeRoute.coords || [
-        (origCoords[0] + destCoords[0]) / 2 + 0.015,
-        (origCoords[1] + destCoords[1]) / 2 + 0.015
+        (origCoords[0] + destCoords[0]) / 2 + 0.012,
+        (origCoords[1] + destCoords[1]) / 2 + 0.012,
       ];
-      boundsPoints.push(bypassCoords);
+      bounds.push(bypassCoords);
 
-      const altPoints = [origCoords, bypassCoords, destCoords];
-
-      const altPolyline = L.polyline(altPoints, {
-        color: '#06b6d4', // Cyan
-        weight: 6,
-        opacity: 0.95,
-        dashArray: '8, 8',
-        lineCap: 'round',
-        lineJoin: 'round'
+      L.polyline([origCoords, bypassCoords, destCoords], {
+        color:     '#2563eb',
+        weight:    5,
+        opacity:   0.9,
+        dashArray: '10, 8',
+        lineCap:   'round',
+        lineJoin:  'round',
       }).bindPopup(
-        `<div style="color: #0f172a; font-size: 12px;">
-          <strong style="color: #0891b2;">Alternative Bypass:</strong> ${alternativeRoute.name}<br/>
-          <span>Bypass ETA: <strong>${alternativeRoute.travel_time_min} mins</strong></span><br/>
-          <span style="color: #059669; font-weight: bold;">⚡ Saves ~${alternativeRoute.time_saved_min} minutes!</span>
-        </div>`
-      );
-      layerGroup.addLayer(altPolyline);
+        `<b style="color:#2563eb">Alternative Bypass</b><br>${alternativeRoute.name}<br>` +
+        `ETA: ${alternativeRoute.travel_time_min} min · Saves ~${alternativeRoute.time_saved_min} min`
+      ).addTo(lg);
 
-      // Bypass Strategic Waypoint Marker
-      const bypassMarker = L.marker(bypassCoords, {
-        icon: createBypassPin(alternativeRoute.via || 'Bypass Corridor')
-      }).bindPopup(
-        `<div style="color: #0f172a; font-size: 12px;">
-          <strong style="color: #0284c7;">${alternativeRoute.via || 'Bypass Waypoint'}</strong><br/>
-          <span>${alternativeRoute.tag || 'Flyover / Expressway Bypass'}</span><br/>
-          <span>Speed: ${alternativeRoute.bypass_speed_kmh} km/h</span>
-        </div>`
-      );
-      layerGroup.addLayer(bypassMarker);
+      L.marker(bypassCoords, { icon: createBypassPin(alternativeRoute.via || 'Bypass') })
+        .bindPopup(
+          `<b style="color:#2563eb">${alternativeRoute.via || 'Bypass'}</b><br>` +
+          `${alternativeRoute.tag || 'Flyover / Expressway'}<br>` +
+          `Speed: ${alternativeRoute.bypass_speed_kmh} km/h`
+        ).addTo(lg);
     }
 
-    // Auto fit map bounds
-    if (boundsPoints.length > 0) {
-      const bounds = L.latLngBounds(boundsPoints);
-      map.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+    // Fit bounds
+    if (bounds.length > 1) {
+      map.fitBounds(L.latLngBounds(bounds), { padding: [40, 40], maxZoom: 14 });
     }
   }, [fromLocation, toLocation, primaryRoute, alternativeRoute, showAlternative, trafficPrediction]);
 
   return (
-    <div className="relative w-full h-72 sm:h-80 rounded-2xl overflow-hidden border border-slate-800 shadow-inner">
-      <div ref={mapContainerRef} className="w-full h-full bg-[#0b0f19]" />
+    <div className="relative">
+      <div ref={containerRef} className="w-full h-72 sm:h-80" />
 
-      {/* Floating Map Legend */}
-      <div className="absolute bottom-3 left-3 z-[400] bg-slate-950/90 border border-slate-800 rounded-xl px-3 py-2 text-[11px] text-slate-300 backdrop-blur-md shadow-lg space-y-1">
+      {/* Map legend */}
+      <div className="absolute bottom-3 left-3 z-[400] bg-white/90 backdrop-blur-sm border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-600 shadow space-y-1">
         <div className="flex items-center gap-2">
-          <span
-            className="w-3 h-1 rounded-full inline-block"
-            style={{
-              backgroundColor:
-                trafficPrediction === 'High'
-                  ? '#f43f5e'
-                  : trafficPrediction === 'Medium'
-                  ? '#f59e0b'
-                  : '#10b981'
-            }}
-          ></span>
-          <span>Primary Route ({trafficPrediction})</span>
+          <span className="w-4 h-1 rounded inline-block" style={{ backgroundColor:
+            trafficPrediction === 'High' ? '#ef4444' :
+            trafficPrediction === 'Medium' ? '#f59e0b' : '#22c55e'
+          }}/>
+          <span>Primary ({trafficPrediction})</span>
         </div>
         {showAlternative && (
           <div className="flex items-center gap-2">
-            <span className="w-3 h-1 rounded-full bg-cyan-400 inline-block border-b border-dashed"></span>
-            <span className="text-cyan-300 font-semibold">Alternative Bypass</span>
+            <span className="w-4 h-1 rounded inline-block bg-blue-600"/>
+            <span className="text-blue-700 font-medium">Alternative Bypass</span>
           </div>
         )}
       </div>
     </div>
   );
 }
-
