@@ -13,7 +13,8 @@ import {
   predictJourneyService,
   getLiveWeatherService,
   getEngineStatusService,
-  getGeoJsonRoadSummary
+  getGeoJsonRoadSummary,
+  getMonitoredCorridorsOsmOverlay
 } from './trafficService.js';
 import { NODE_COORDINATES, DHAKA_BYPASS_WAYPOINTS } from './routesConfig.js';
 
@@ -304,6 +305,16 @@ app.get('/api/roads/summary', (req, res) => {
     const summary = getGeoJsonRoadSummary();
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.json({ success: true, data: summary });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 8b. Verified Official Monitored Corridors (R01-R50) routed along OSM roads with CSV/live telemetry
+app.get('/api/corridors/osm-overlay', (req, res) => {
+  try {
+    const corridors = getMonitoredCorridorsOsmOverlay();
+    res.json({ success: true, count: corridors.length, corridors });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
