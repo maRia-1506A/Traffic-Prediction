@@ -1,101 +1,131 @@
 import React from 'react';
-import {
-  Navigation,
-  MapPin,
-  Compass,
-  Sparkles,
-  BarChart3,
-  Cpu,
-  RefreshCw,
-  CloudSun,
-  ShieldAlert,
-  Zap,
-  Car
-} from 'lucide-react';
 
-export default function Navbar({ activeTab, setActiveTab, onRefresh, loading, stats }) {
-  const tabs = [
-    { id: 'journey', label: 'Traffic Predictor', icon: Car, featured: true },
-    { id: 'map', label: 'Live Map & Overview', icon: MapPin },
-    { id: 'routes', label: '50 Corridors (R01-R50)', icon: Navigation },
-    { id: 'advisor', label: 'Jam Bypass Advisor', icon: Compass },
-    { id: 'predictor', label: 'ML Simulator', icon: Sparkles },
-    { id: 'history', label: 'Dataset & Analytics', icon: BarChart3 },
-    { id: 'system', label: 'Engine Status', icon: Cpu },
-  ];
+const NAV_ITEMS = [
+  {
+    id: 'home',
+    label: 'Home',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+      </svg>
+    ),
+  },
+  {
+    id: 'map',
+    label: 'Explore Map',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+      </svg>
+    ),
+  },
+  {
+    id: 'insights',
+    label: 'Traffic Insights',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+  {
+    id: 'about',
+    label: 'About',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+];
 
-  const weather = stats?.weatherSummary || { condition: 'Partly Cloudy', temperature_c: 29.4 };
+export default function Navbar({ activeTab, setActiveTab }) {
+  const [mobileOpen, setMobileOpen] = React.useState(false);
 
   return (
-    <header className="sticky top-0 z-50 bg-[#0c1220]/90 backdrop-blur-md border-b border-slate-800/80 px-4 lg:px-6 py-3">
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
-        {/* Logo & Live Status */}
-        <div className="flex items-center gap-3 w-full md:w-auto justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-emerald-500 flex items-center justify-center shadow-lg shadow-cyan-500/20 text-white font-bold text-lg">
-              <Navigation className="w-5 h-5 -rotate-45" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-extrabold text-base tracking-tight text-white">DHAKA TRAFFIC</span>
-                <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60">
-                  AI ENGINE
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 font-medium">Real-Time Congestion & OSM Bypass Machine</p>
-            </div>
-          </div>
+    <header className="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6">
+        <div className="h-14 flex items-center justify-between">
 
-          {/* Quick weather pill on mobile */}
-          <div className="flex md:hidden items-center gap-1.5 text-xs text-slate-300 bg-slate-900/80 px-2.5 py-1 rounded-lg border border-slate-800">
-            <CloudSun className="w-3.5 h-3.5 text-amber-400" />
-            <span>{weather.temperature_c}°C</span>
-          </div>
-        </div>
+          {/* Logo */}
+          <button
+            onClick={() => setActiveTab('home')}
+            className="flex items-center gap-2.5 shrink-0"
+          >
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <span className="font-bold text-slate-800 text-sm sm:text-base leading-tight">
+              Dhaka Traffic<br className="sm:hidden" />
+              <span className="hidden sm:inline"> </span>Prediction System
+            </span>
+          </button>
 
-        {/* Navigation Tabs */}
-        <nav className="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-none">
-          {tabs.map(tab => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
+          {/* Desktop nav */}
+          <nav className="hidden sm:flex items-center gap-1">
+            {NAV_ITEMS.map((item) => (
               <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-all duration-150 ${
-                  isActive
-                    ? 'bg-gradient-to-r from-cyan-500/20 to-blue-500/20 text-cyan-400 border border-cyan-500/30 shadow-sm shadow-cyan-500/10'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-md text-sm font-medium transition ${
+                  activeTab === item.id
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-cyan-400' : 'text-slate-400'}`} />
-                {tab.label}
+                {item.icon}
+                {item.label}
               </button>
-            );
-          })}
-        </nav>
+            ))}
+          </nav>
 
-        {/* Right Info & Refresh */}
-        <div className="hidden lg:flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800 px-3 py-1.5 rounded-xl text-xs">
-            <CloudSun className="w-4 h-4 text-amber-400" />
-            <span className="text-slate-300 font-medium">{weather.temperature_c}°C</span>
-            <span className="text-slate-500">•</span>
-            <span className="text-slate-400">{weather.condition}</span>
-          </div>
-
+          {/* Mobile hamburger */}
           <button
-            onClick={onRefresh}
-            disabled={loading}
-            title="Refresh Live Telemetry"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs font-medium text-slate-300 hover:text-white transition disabled:opacity-50"
+            className="sm:hidden p-2 rounded-md text-slate-500 hover:text-slate-900 hover:bg-slate-100"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label="Toggle menu"
           >
-            <RefreshCw className={`w-3.5 h-3.5 text-cyan-400 ${loading ? 'animate-spin' : ''}`} />
-            <span>Sync</span>
+            {mobileOpen ? (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            ) : (
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            )}
           </button>
         </div>
+
+        {/* Mobile dropdown */}
+        {mobileOpen && (
+          <div className="sm:hidden pb-3 space-y-1 border-t border-slate-100 pt-2">
+            {NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => { setActiveTab(item.id); setMobileOpen(false); }}
+                className={`w-full flex items-center gap-2 px-3 py-2.5 rounded-md text-sm font-medium transition ${
+                  activeTab === item.id
+                    ? 'bg-blue-50 text-blue-700'
+                    : 'text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {item.icon}
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </header>
   );
 }
-
