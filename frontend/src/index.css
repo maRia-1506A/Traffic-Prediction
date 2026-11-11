@@ -2,73 +2,42 @@
 
 @layer base {
   body {
-    background-color: #0b0f19;
-    color: #f1f5f9;
+    background-color: #f8fafc;
+    color: #1e293b;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     overflow-x: hidden;
   }
 }
 
 /* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f5f9; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-::-webkit-scrollbar-track {
-  background: #0f172a;
-}
-
-::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-/* Leaflet dark theme map enhancements */
+/* Leaflet light theme */
 .leaflet-container {
-  background: #090d16 !important;
+  background: #e2e8f0 !important;
   font-family: inherit;
 }
 
 .leaflet-popup-content-wrapper {
-  background: #111827 !important;
-  color: #f3f4f6 !important;
-  border-radius: 0.5rem;
-  border: 1px solid #374151;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border-radius: 0.75rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.12);
 }
 
-.leaflet-popup-tip {
-  background: #111827 !important;
-}
+.leaflet-popup-tip { background: #ffffff !important; }
 
 .leaflet-control-zoom a {
-  background-color: #1e293b !important;
-  color: #94a3b8 !important;
-  border-color: #334155 !important;
+  background-color: #ffffff !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
 }
 
 .leaflet-control-zoom a:hover {
-  background-color: #334155 !important;
-  color: #f8fafc !important;
-}
-
-/* Pulse animation for heavy congestion */
-@keyframes pulse-jam {
-  0%, 100% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  50% {
-    opacity: 0.7;
-    transform: scale(1.05);
-  }
-}
-
-.animate-jam-pulse {
-  animation: pulse-jam 2s infinite ease-in-out;
+  background-color: #f1f5f9 !important;
+  color: #1e293b !important;
 }
