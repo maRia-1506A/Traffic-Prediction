@@ -28,7 +28,7 @@ export default function App() {
 
       <footer className="border-t border-slate-200 bg-white mt-auto py-5 px-4">
         <div className="max-w-6xl mx-auto text-center space-y-1">
-          <p className="text-sm font-medium text-slate-700">Dhaka Traffic Prediction System</p>
+          <p className="text-sm font-medium text-slate-700">TrafficPulse</p>
           <p className="text-xs text-slate-400">
             OSM Road Network · Google Maps Routes API · OpenWeatherMap · React · Node.js · Leaflet
           </p>

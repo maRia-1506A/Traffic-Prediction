@@ -453,3 +453,61 @@ export function findRouteCheckpoints(routeCoords, fromName, toName, explicitStep
   return spaced;
 }
 
+/**
+ * Segment an external polyline (e.g. decoded Google Routes polyline) using nearest OSM road names
+ */
+export function segmentPolylineWithOsmNames(coords, fallbackLabel = 'Primary Corridor') {
+  if (!Array.isArray(coords) || coords.length < 2) return [];
+  const { adj, coordsMap, grid, available } = loadOsmGraph();
+
+  const findNearestEdgeMeta = (pt) => {
+    if (!available) return { name: fallbackLabel, highway: 'primary', wayId: '' };
+    const gx = Math.floor(pt[0] * 50);
+    const gy = Math.floor(pt[1] * 50);
+    let bestKey = null;
+    let bestDist = Infinity;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const cell = grid.get(`${gx + dx},${gy + dy}`);
+        if (!cell) continue;
+        for (const k of cell) {
+          const d = approxKm(pt, coordsMap.get(k));
+          if (d < bestDist) { bestDist = d; bestKey = k; }
+        }
+      }
+    }
+    if (bestKey && bestDist <= 0.25) {
+      const edges = adj.get(bestKey);
+      if (edges && edges.length > 0) {
+        const named = edges.find(e => e.hasExplicitName) || edges[0];
+        return { name: named.name || fallbackLabel, highway: named.highway || 'primary', wayId: named.wayId || '' };
+      }
+    }
+    return { name: fallbackLabel, highway: 'primary', wayId: '' };
+  };
+
+  const segments = [];
+  for (let i = 1; i < coords.length; i++) {
+    const a = coords[i - 1];
+    const b = coords[i];
+    const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const meta = findNearestEdgeMeta(mid);
+    const dKm = approxKm(a, b);
+    const prev = segments[segments.length - 1];
+    if (prev && prev.name === meta.name) {
+      prev.coordinates.push(b);
+      prev.distance_km = Number((prev.distance_km + dKm).toFixed(2));
+    } else {
+      segments.push({
+        id: `seg-${segments.length}`,
+        name: meta.name,
+        highway: meta.highway,
+        way_id: meta.wayId,
+        distance_km: Number(dKm.toFixed(2)),
+        coordinates: [a, b],
+      });
+    }
+  }
+  return segments;
+}
+

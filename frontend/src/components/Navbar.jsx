@@ -64,9 +64,8 @@ export default function Navbar({ activeTab, setActiveTab }) {
                   d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
               </svg>
             </div>
-            <span className="font-bold text-slate-800 text-sm sm:text-base leading-tight">
-              Dhaka Traffic<br className="sm:hidden" />
-              <span className="hidden sm:inline"> </span>Prediction System
+            <span className="font-bold text-slate-800 text-base sm:text-lg tracking-tight">
+              TrafficPulse
             </span>
           </button>
 
