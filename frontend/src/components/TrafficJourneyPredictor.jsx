@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ALL_DHAKA_LOCATIONS } from '../utils/journeyPredictor.js';
 import { predictJourneyApi } from '../api.js';
 import JourneyRouteMap from './JourneyRouteMap.jsx';
@@ -19,18 +19,74 @@ const LEVEL_CONFIG = {
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function TrafficJourneyPredictor() {
   const todayStr = new Date().toISOString().split('T')[0];
+  const timePickerRef = useRef(null);
 
-  // Form state
-  const [selectedDate, setSelectedDate] = useState(todayStr);
-  const [selectedTime, setSelectedTime] = useState('09:00');
-  const [fromLocation, setFromLocation] = useState('Mirpur 10');
-  const [toLocation, setToLocation]     = useState('Farmgate');
+  // Form state — empty by default so user must choose
+  const [selectedDate, setSelectedDate] = useState('');
+  const [selectedTime, setSelectedTime] = useState('');
+  const [fromLocation, setFromLocation] = useState('');
+  const [toLocation, setToLocation]     = useState('');
+
+  // Custom time picker state
+  const [timePickerOpen, setTimePickerOpen] = useState(false);
+  const [pickerHour,   setPickerHour]   = useState('12');
+  const [pickerMinute, setPickerMinute] = useState('00');
+  const [pickerAmPm,   setPickerAmPm]   = useState('AM');
+
+  // Close picker when clicking outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (timePickerRef.current && !timePickerRef.current.contains(e.target)) {
+        setTimePickerOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const handleTimeOk = () => {
+    const h = pickerHour.padStart(2, '0');
+    const m = pickerMinute.padStart(2, '0');
+    // Convert to 24h for internal value
+    let hour24 = parseInt(h, 10);
+    if (pickerAmPm === 'PM' && hour24 !== 12) hour24 += 12;
+    if (pickerAmPm === 'AM' && hour24 === 12) hour24 = 0;
+    const time24 = `${String(hour24).padStart(2,'0')}:${m}`;
+    setSelectedTime(time24);
+    setTimePickerOpen(false);
+  };
+
+  const handleTimeClear = () => {
+    setPickerHour('12'); setPickerMinute('00'); setPickerAmPm('AM');
+    setSelectedTime('');
+    setTimePickerOpen(false);
+  };
+
+  const setQuickTime = (time24) => {
+    setSelectedTime(time24);
+    const [h, m] = time24.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12  = h % 12 || 12;
+    setPickerHour(String(h12).padStart(2,'0'));
+    setPickerMinute(String(m).padStart(2,'0'));
+    setPickerAmPm(ampm);
+  };
+
+  // Format display time (24h → 12h display)
+  const formatDisplayTime = (t) => {
+    if (!t) return '';
+    const [h, m] = t.split(':').map(Number);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12  = h % 12 || 12;
+    return `${String(h12).padStart(2,'0')}:${String(m).padStart(2,'0')} ${ampm}`;
+  };
 
   // UI state
   const [loading, setLoading]               = useState(false);
   const [result, setResult]                 = useState(null);
   const [error, setError]                   = useState(null);
   const [alternativeChoice, setAlternativeChoice] = useState(null); // null | 'yes' | 'no'
+  const [selectedAltIndex, setSelectedAltIndex]   = useState(0);
   const [formError, setFormError]           = useState('');
 
   const dayName      = getDayName(selectedDate);
@@ -66,6 +122,7 @@ export default function TrafficJourneyPredictor() {
     setResult(null);
     setError(null);
     setAlternativeChoice(null);
+    setSelectedAltIndex(0);
 
     try {
       const data = await predictJourneyApi({
@@ -84,6 +141,12 @@ export default function TrafficJourneyPredictor() {
   };
 
   const cfg = result ? (LEVEL_CONFIG[result.traffic_prediction] || LEVEL_CONFIG.Low) : null;
+  const altList = result?.alternative_routes?.length
+    ? result.alternative_routes
+    : result?.alternative_route
+    ? [result.alternative_route]
+    : [];
+  const activeAlt = altList[selectedAltIndex] || result?.alternative_route || null;
 
   return (
     <div className="space-y-8">
@@ -99,7 +162,7 @@ export default function TrafficJourneyPredictor() {
       {/* ── Prediction Form ────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8">
         <form onSubmit={handleSubmit} noValidate>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 relative">
 
             {/* Travel Date */}
             <div className="space-y-1.5">
@@ -112,39 +175,81 @@ export default function TrafficJourneyPredictor() {
                 min={todayStr}
                 onChange={(e) => setSelectedDate(e.target.value)}
                 required
-                className="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+                placeholder="Select date"
+                className={`w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition ${!selectedDate ? 'text-slate-400' : 'text-slate-800'}`}
               />
-              <div className="flex gap-2 pt-0.5">
-                <button type="button" onClick={setToday}
-                  className="text-xs text-blue-600 hover:underline">Today</button>
-                <span className="text-slate-300 text-xs">|</span>
-                <button type="button" onClick={setTomorrow}
-                  className="text-xs text-blue-600 hover:underline">Tomorrow</button>
-                {dayName && (
-                  <span className={`ml-auto text-xs font-medium px-2 py-0.5 rounded-full ${
+              {selectedDate && dayName && (
+                <div className="flex pt-0.5">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                     isWeekendDay ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'
                   }`}>
                     {dayName}
                   </span>
-                )}
-              </div>
+                </div>
+              )}
             </div>
 
-            {/* Travel Time */}
-            <div className="space-y-1.5">
+            {/* Travel Time — custom picker */}
+            <div className="space-y-1.5" ref={timePickerRef}>
               <label className="block text-sm font-medium text-slate-700">
                 Travel Time
               </label>
-              <input
-                type="time"
-                value={selectedTime}
-                onChange={(e) => setSelectedTime(e.target.value)}
-                required
-                className="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
-              />
+
+              {/* Display field */}
+              <button
+                type="button"
+                onClick={() => setTimePickerOpen(v => !v)}
+                className={`w-full text-left border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white flex items-center justify-between ${selectedTime ? 'text-slate-800' : 'text-slate-400'}`}
+              >
+                <span>{selectedTime ? formatDisplayTime(selectedTime) : 'Select time'}</span>
+                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </button>
+
+              {/* Picker dropdown */}
+              {timePickerOpen && (
+                <div className="absolute z-50 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg w-64 overflow-hidden">
+                  {/* Native clock input */}
+                  <div className="flex items-center justify-center p-4 pb-3">
+                    <input
+                      type="time"
+                      autoFocus
+                      value={(() => {
+                        let h = parseInt(pickerHour, 10);
+                        if (pickerAmPm === 'PM' && h !== 12) h += 12;
+                        if (pickerAmPm === 'AM' && h === 12) h = 0;
+                        return `${String(h).padStart(2,'0')}:${pickerMinute}`;
+                      })()}
+                      onChange={e => {
+                        const val = e.target.value;
+                        if (!val) return;
+                        const [h, m] = val.split(':').map(Number);
+                        setPickerAmPm(h >= 12 ? 'PM' : 'AM');
+                        setPickerHour(String(h % 12 || 12).padStart(2,'0'));
+                        setPickerMinute(String(m).padStart(2,'0'));
+                      }}
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    />
+                  </div>
+                  {/* Footer — Clear / OK like the date picker */}
+                  <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5">
+                    <button type="button" onClick={handleTimeClear}
+                      className="text-sm text-slate-500 hover:text-slate-700 transition">
+                      Clear
+                    </button>
+                    <button type="button" onClick={handleTimeOk}
+                      className="text-sm text-blue-600 font-semibold hover:text-blue-800 transition">
+                      OK
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick picks */}
               <div className="flex gap-2 pt-0.5">
                 {[['08:30','Morning Peak'],['14:00','Midday'],['18:30','Evening Peak']].map(([t,l]) => (
-                  <button key={t} type="button" onClick={() => setSelectedTime(t)}
+                  <button key={t} type="button" onClick={() => setQuickTime(t)}
                     className={`text-xs px-2 py-0.5 rounded-full border transition ${
                       selectedTime === t
                         ? 'bg-blue-600 text-white border-blue-600'
@@ -164,8 +269,9 @@ export default function TrafficJourneyPredictor() {
               <select
                 value={fromLocation}
                 onChange={(e) => setFromLocation(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
+                className={`w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white ${!fromLocation ? 'text-slate-400' : 'text-slate-800'}`}
               >
+                <option value="" disabled>Select origin</option>
                 {ALL_DHAKA_LOCATIONS.map(loc => (
                   <option key={loc} value={loc}>{loc}</option>
                 ))}
@@ -190,8 +296,9 @@ export default function TrafficJourneyPredictor() {
               <select
                 value={toLocation}
                 onChange={(e) => setToLocation(e.target.value)}
-                className="w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white"
+                className={`w-full border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white ${!toLocation ? 'text-slate-400' : 'text-slate-800'}`}
               >
+                <option value="" disabled>Select destination</option>
                 {ALL_DHAKA_LOCATIONS.map(loc => (
                   <option key={loc} value={loc}>{loc}</option>
                 ))}
@@ -301,21 +408,24 @@ export default function TrafficJourneyPredictor() {
             )}
           </div>
 
-          {/* ── Map ─────────────────────────────────────────────────────────── */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100">
-              <h2 className="text-sm font-semibold text-slate-700">Route Map</h2>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Showing route from <strong>{result.from}</strong> to <strong>{result.to}</strong>
-              </p>
-            </div>
+          {/* ── Map (Main visual focus) ───────────────────────────────────────── */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-md overflow-hidden">
             <JourneyRouteMap
               fromLocation={result.from}
               toLocation={result.to}
               primaryRoute={result.primary_route}
+              alternativeRoutes={altList}
               alternativeRoute={result.alternative_route}
               showAlternative={alternativeChoice === 'yes'}
+              selectedAltIndex={selectedAltIndex}
+              onSelectAlternative={(idx) => {
+                setSelectedAltIndex(idx);
+                if (alternativeChoice !== 'yes') setAlternativeChoice('yes');
+              }}
+              onToggleAlternative={(show) => setAlternativeChoice(show ? 'yes' : 'no')}
               trafficPrediction={result.traffic_prediction}
+              selectedDate={selectedDate}
+              selectedTime={selectedTime}
             />
           </div>
 
@@ -325,7 +435,7 @@ export default function TrafficJourneyPredictor() {
               Would you like to see alternative routes?
             </h2>
             <p className="text-sm text-slate-500">
-              We can suggest a bypass corridor to help you avoid congestion.
+              We can suggest bypass corridors to help you avoid congestion.
             </p>
             <div className="flex items-center justify-center gap-3">
               <button
@@ -352,25 +462,49 @@ export default function TrafficJourneyPredictor() {
           </div>
 
           {/* ── Alternative Route Details (Yes) ─────────────────────────────── */}
-          {alternativeChoice === 'yes' && result.alternative_route && (
+          {alternativeChoice === 'yes' && activeAlt && (
             <div className="bg-blue-50 rounded-2xl border border-blue-200 p-6 space-y-4">
+              {altList.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                  {altList.map((alt, idx) => (
+                    <button
+                      key={alt.id || idx}
+                      type="button"
+                      onClick={() => setSelectedAltIndex(idx)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition flex items-center gap-2 ${
+                        selectedAltIndex === idx
+                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                          : 'bg-white text-slate-700 border-blue-200 hover:border-blue-400'
+                      }`}
+                    >
+                      <span>Route {idx + 1}: {alt.via || alt.name}</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                        selectedAltIndex === idx ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                      }`}>
+                        {alt.traffic_prediction || 'Low'} · {alt.travel_time_min}m
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <span className="inline-block text-xs font-semibold px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full mb-2">
-                    {result.alternative_route.tag || 'Bypass Route'}
+                    {activeAlt.tag || 'Bypass Route'} · {activeAlt.traffic_prediction || 'Low'} Traffic
                   </span>
                   <h3 className="text-base font-bold text-slate-800">
-                    {result.alternative_route.name}
+                    {activeAlt.name}
                   </h3>
                   <p className="text-sm text-slate-500 mt-1">
-                    Via {result.alternative_route.via || 'Bypass Corridor'}
+                    Via {activeAlt.via || 'Bypass Corridor'}
                   </p>
                 </div>
-                {result.alternative_route.time_saved_min > 0 && (
+                {activeAlt.time_saved_min > 0 && (
                   <div className="text-right shrink-0">
                     <p className="text-xs text-slate-500">Time saved</p>
                     <p className="text-lg font-bold text-green-600">
-                      ~{result.alternative_route.time_saved_min} min
+                      ~{activeAlt.time_saved_min} min
                     </p>
                   </div>
                 )}
@@ -379,9 +513,9 @@ export default function TrafficJourneyPredictor() {
               {/* Comparison */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: 'Alt. Travel Time', value: `${result.alternative_route.travel_time_min} min`, color: 'text-blue-700' },
-                  { label: 'Speed',             value: `${result.alternative_route.bypass_speed_kmh} km/h` },
-                  { label: 'Distance',          value: `${result.alternative_route.distance_km} km` },
+                  { label: 'Alt. Travel Time', value: `${activeAlt.travel_time_min} min`, color: 'text-blue-700' },
+                  { label: 'Speed',             value: `${activeAlt.bypass_speed_kmh} km/h` },
+                  { label: 'Distance',          value: `${activeAlt.distance_km} km` },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-white rounded-xl p-3 text-center border border-blue-100">
                     <p className="text-xs text-slate-400 uppercase font-medium">{label}</p>
@@ -391,22 +525,22 @@ export default function TrafficJourneyPredictor() {
               </div>
 
               {/* Route steps */}
-              {result.alternative_route.steps?.length > 0 && (
+              {activeAlt.steps?.length > 0 && (
                 <div className="bg-white rounded-xl border border-blue-100 px-4 py-3">
                   <p className="text-xs font-semibold text-slate-500 mb-2">Route Path</p>
                   <div className="flex flex-wrap items-center gap-1.5 text-sm">
-                    {result.alternative_route.steps.map((step, idx) => (
+                    {activeAlt.steps.map((step, idx) => (
                       <React.Fragment key={idx}>
                         <span className={`px-2.5 py-1 rounded-lg text-xs font-medium ${
                           idx === 0
                             ? 'bg-green-100 text-green-700'
-                            : idx === result.alternative_route.steps.length - 1
+                            : idx === activeAlt.steps.length - 1
                             ? 'bg-red-100 text-red-700'
                             : 'bg-blue-100 text-blue-700'
                         }`}>
                           {step}
                         </span>
-                        {idx < result.alternative_route.steps.length - 1 && (
+                        {idx < activeAlt.steps.length - 1 && (
                           <svg className="w-3.5 h-3.5 text-slate-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/>
                           </svg>
@@ -418,15 +552,15 @@ export default function TrafficJourneyPredictor() {
               )}
 
               {/* Reason */}
-              {result.alternative_route.reason && (
+              {activeAlt.reason && (
                 <p className="text-xs text-blue-700 bg-blue-100 rounded-xl px-4 py-3">
-                  <strong>Why this route: </strong>{result.alternative_route.reason}
+                  <strong>Why this route: </strong>{activeAlt.reason}
                 </p>
               )}
 
               {/* Google Maps link */}
-              {result.alternative_route.google_maps_url && (
-                <a href={result.alternative_route.google_maps_url}
+              {activeAlt.google_maps_url && (
+                <a href={activeAlt.google_maps_url}
                   target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
