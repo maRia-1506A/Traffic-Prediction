@@ -15,7 +15,7 @@ export default function AboutPage() {
           </svg>
         </div>
         <h1 className="text-2xl font-bold text-slate-800">About This Project</h1>
-        <p className="text-sm text-slate-500">Dhaka Traffic Prediction System</p>
+        <p className="text-sm text-slate-500">TrafficPulse — Dhaka Traffic Prediction</p>
       </div>
 
       {/* Purpose */}

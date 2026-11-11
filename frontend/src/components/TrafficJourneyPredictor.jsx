@@ -146,7 +146,9 @@ export default function TrafficJourneyPredictor() {
     : result?.alternative_route
     ? [result.alternative_route]
     : [];
-  const activeAlt = altList[selectedAltIndex] || result?.alternative_route || null;
+  const activeAltCardIdx = typeof selectedAltIndex === 'number' ? selectedAltIndex : 0;
+  const activeAlt = altList[activeAltCardIdx] || result?.alternative_route || null;
+  const ALT_ROUTE_COLORS = ['#7c3aed', '#0d9488', '#ea580c']; // Purple, Teal, Orange
 
   return (
     <div className="space-y-8">
@@ -386,10 +388,10 @@ export default function TrafficJourneyPredictor() {
             {/* Stats row */}
             <div className="mt-5 pt-5 border-t border-slate-200 grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { label: 'Travel Time', value: `${result.primary_route?.travel_time_min ?? '—'} min` },
-                { label: 'Speed',       value: `${result.primary_route?.speed_kmh ?? '—'} km/h` },
-                { label: 'Distance',    value: `${result.primary_route?.distance_km ?? '—'} km` },
-                { label: 'Delay',       value: result.primary_route?.traffic_delay_min > 0
+                { label: result.primary_route?.is_estimate !== false ? 'Est. Travel Time' : 'Travel Time', value: `${result.primary_route?.travel_time_min ?? '—'} min` },
+                { label: result.primary_route?.is_estimate !== false ? 'Est. Speed' : 'Speed',             value: `${result.primary_route?.speed_kmh ?? '—'} km/h` },
+                { label: 'Distance',                                                                        value: `${result.primary_route?.distance_km ?? '—'} km` },
+                { label: result.primary_route?.is_estimate !== false ? 'Est. Delay' : 'Delay',             value: result.primary_route?.traffic_delay_min > 0
                     ? `+${result.primary_route.traffic_delay_min} min`
                     : 'No delay' },
               ].map(({ label, value }) => (
@@ -422,7 +424,10 @@ export default function TrafficJourneyPredictor() {
                 setSelectedAltIndex(idx);
                 if (alternativeChoice !== 'yes') setAlternativeChoice('yes');
               }}
-              onToggleAlternative={(show) => setAlternativeChoice(show ? 'yes' : 'no')}
+              onToggleAlternative={(show) => {
+                setAlternativeChoice(show ? 'yes' : 'no');
+                if (show && selectedAltIndex === 'primary') setSelectedAltIndex(0);
+              }}
               trafficPrediction={result.traffic_prediction}
               selectedDate={selectedDate}
               selectedTime={selectedTime}
@@ -439,7 +444,10 @@ export default function TrafficJourneyPredictor() {
             </p>
             <div className="flex items-center justify-center gap-3">
               <button
-                onClick={() => setAlternativeChoice('yes')}
+                onClick={() => {
+                  setAlternativeChoice('yes');
+                  if (selectedAltIndex === 'primary') setSelectedAltIndex(0);
+                }}
                 className={`px-6 py-2.5 rounded-lg text-sm font-semibold border transition ${
                   alternativeChoice === 'yes'
                     ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
@@ -449,7 +457,10 @@ export default function TrafficJourneyPredictor() {
                 Yes
               </button>
               <button
-                onClick={() => setAlternativeChoice('no')}
+                onClick={() => {
+                  setAlternativeChoice('no');
+                  setSelectedAltIndex(0);
+                }}
                 className={`px-6 py-2.5 rounded-lg text-sm font-semibold border transition ${
                   alternativeChoice === 'no'
                     ? 'bg-slate-700 text-white border-slate-700'
@@ -464,27 +475,57 @@ export default function TrafficJourneyPredictor() {
           {/* ── Alternative Route Details (Yes) ─────────────────────────────── */}
           {alternativeChoice === 'yes' && activeAlt && (
             <div className="bg-blue-50 rounded-2xl border border-blue-200 p-6 space-y-4">
-              {altList.length > 1 && (
+              {altList.length >= 1 && (
                 <div className="flex flex-wrap gap-2">
-                  {altList.map((alt, idx) => (
-                    <button
-                      key={alt.id || idx}
-                      type="button"
-                      onClick={() => setSelectedAltIndex(idx)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition flex items-center gap-2 ${
-                        selectedAltIndex === idx
-                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
-                          : 'bg-white text-slate-700 border-blue-200 hover:border-blue-400'
-                      }`}
-                    >
-                      <span>Route {idx + 1}: {alt.via || alt.name}</span>
-                      <span className={`px-1.5 py-0.5 rounded text-[10px] ${
-                        selectedAltIndex === idx ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {alt.traffic_prediction || 'Low'} · {alt.travel_time_min}m
-                      </span>
-                    </button>
-                  ))}
+                  <button
+                    type="button"
+                    onClick={() => setSelectedAltIndex('primary')}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition flex items-center gap-2 ${
+                      selectedAltIndex === 'primary'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                        : 'bg-white text-slate-700 border-slate-200 hover:border-blue-400'
+                    }`}
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: selectedAltIndex === 'primary' ? '#ffffff' : '#2563eb' }}
+                    />
+                    <span>Primary Route</span>
+                    <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                      selectedAltIndex === 'primary' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                    }`}>
+                      {result.traffic_prediction} · {result.primary_route?.travel_time_min}m
+                    </span>
+                  </button>
+
+                  {altList.map((alt, idx) => {
+                    const routeCol = ALT_ROUTE_COLORS[idx % ALT_ROUTE_COLORS.length];
+                    const isSel = selectedAltIndex === idx;
+                    return (
+                      <button
+                        key={alt.id || idx}
+                        type="button"
+                        onClick={() => setSelectedAltIndex(idx)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold border transition flex items-center gap-2 ${
+                          isSel
+                            ? 'text-white shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-200 hover:border-slate-400'
+                        }`}
+                        style={isSel ? { backgroundColor: routeCol, borderColor: routeCol } : undefined}
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: isSel ? '#ffffff' : routeCol }}
+                        />
+                        <span>Alt {idx + 1}: {alt.via || alt.name}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[10px] ${
+                          isSel ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-600'
+                        }`}>
+                          {alt.traffic_prediction || 'Low'} · {alt.travel_time_min}m
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
@@ -500,11 +541,23 @@ export default function TrafficJourneyPredictor() {
                     Via {activeAlt.via || 'Bypass Corridor'}
                   </p>
                 </div>
-                {activeAlt.time_saved_min > 0 && (
+                {activeAlt.time_saved_min !== undefined && (
                   <div className="text-right shrink-0">
-                    <p className="text-xs text-slate-500">Time saved</p>
-                    <p className="text-lg font-bold text-green-600">
-                      ~{activeAlt.time_saved_min} min
+                    <p className="text-xs text-slate-500">
+                      {activeAlt.time_saved_min >= 0 ? 'Est. time saved' : 'vs Primary'}
+                    </p>
+                    <p className={`text-lg font-bold ${
+                      activeAlt.time_saved_min > 0
+                        ? 'text-green-600'
+                        : activeAlt.time_saved_min < 0
+                        ? 'text-amber-600'
+                        : 'text-slate-600'
+                    }`}>
+                      {activeAlt.time_saved_min > 0
+                        ? `~${activeAlt.time_saved_min} min`
+                        : activeAlt.time_saved_min < 0
+                        ? `+${Math.abs(activeAlt.time_saved_min)} min`
+                        : '0 min'}
                     </p>
                   </div>
                 )}
@@ -513,9 +566,9 @@ export default function TrafficJourneyPredictor() {
               {/* Comparison */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: 'Alt. Travel Time', value: `${activeAlt.travel_time_min} min`, color: 'text-blue-700' },
-                  { label: 'Speed',             value: `${activeAlt.bypass_speed_kmh} km/h` },
-                  { label: 'Distance',          value: `${activeAlt.distance_km} km` },
+                  { label: activeAlt.is_estimate !== false ? 'Est. Alt. Time' : 'Alt. Travel Time', value: `${activeAlt.travel_time_min} min`, color: 'text-blue-700' },
+                  { label: 'Est. Speed',       value: `${activeAlt.bypass_speed_kmh} km/h` },
+                  { label: 'Distance',         value: `${activeAlt.distance_km} km` },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-white rounded-xl p-3 text-center border border-blue-100">
                     <p className="text-xs text-slate-400 uppercase font-medium">{label}</p>
