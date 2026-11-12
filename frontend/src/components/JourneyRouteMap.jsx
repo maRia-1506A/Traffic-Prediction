@@ -102,6 +102,7 @@ export default function JourneyRouteMap({
 }) {
   const containerRef    = useRef(null);
   const mapRef          = useRef(null);
+  const altPanelRef     = useRef(null);
   const corridorLayerRef = useRef(null);
   const altLayerRef     = useRef(null);
   const routeLayerRef   = useRef(null);
@@ -441,19 +442,22 @@ export default function JourneyRouteMap({
       poly.addTo(rl);
     });
 
-    // 3. Intermediate intersection dots + alternating clean pill labels
-    const checkpoints = primaryRoute?.checkpoints || [];
+    // 3. Intermediate intersection dots + alternating clean pill labels (following selected route)
+    const activeRouteObj = isAltActive ? resolvedAlts[selectedAltIndex] : primaryRoute;
+    const activeWaypointColor = isAltActive ? (ALT_STYLES[selectedAltIndex]?.color || '#64748b') : '#2563eb';
+    const checkpoints = activeRouteObj?.checkpoints || [];
     checkpoints.forEach((cp, idx) => {
       if (!cp.coords) return;
       const side = idx % 2 === 0 ? 'left' : 'right';
       const offsetX = side === 'left' ? -8 : 8;
       L.circleMarker(cp.coords, {
         radius: 5,
-        fillColor: '#64748b',
+        fillColor: activeWaypointColor,
         color: '#ffffff',
         weight: 2,
         opacity: 1,
         fillOpacity: 1,
+        pane: 'selectedRoutePane',
       })
         .bindTooltip(cp.name, {
           permanent: true,
@@ -464,7 +468,7 @@ export default function JourneyRouteMap({
         .bindPopup(
           popupShell(`
             <div style="font-weight:700;font-size:13px">${cp.name}</div>
-            <div style="color:#64748b;font-size:11px;margin-top:2px">Intermediate waypoint along ${fromLocation} → ${toLocation}</div>
+            <div style="color:#64748b;font-size:11px;margin-top:2px">Intermediate waypoint along ${isAltActive ? (activeRouteObj?.route_name || `Alternative ${selectedAltIndex + 1}`) : `${fromLocation} → ${toLocation}`}</div>
           `)
         )
         .addTo(rl);
@@ -581,6 +585,28 @@ export default function JourneyRouteMap({
     return () => clearTimeout(t);
   }, [fromLocation, toLocation, primaryRoute]);
 
+  // Close Alternative Routes dropdown when clicking anywhere outside the panel (including on the map)
+  useEffect(() => {
+    if (!altMenuOpen) return;
+
+    const handleOutside = (e) => {
+      if (altPanelRef.current && !altPanelRef.current.contains(e.target)) {
+        setAltMenuOpen(false);
+      }
+    };
+
+    const map = mapRef.current;
+    const handleMapClick = () => setAltMenuOpen(false);
+
+    document.addEventListener('mousedown', handleOutside, true);
+    if (map) map.on('click', handleMapClick);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutside, true);
+      if (map) map.off('click', handleMapClick);
+    };
+  }, [altMenuOpen]);
+
   const isAltSelected = showAlternative && typeof selectedAltIndex === 'number' && selectedAltIndex >= 0 && selectedAltIndex < resolvedAlts.length;
   const activeAlt = isAltSelected ? resolvedAlts[selectedAltIndex] : null;
   const activeAltStyle = isAltSelected ? ALT_STYLES[selectedAltIndex % ALT_STYLES.length] : null;
@@ -603,7 +629,7 @@ export default function JourneyRouteMap({
 
       {/* ── Top-Left Compact Floating Route Info Panel ──────────────────────── */}
       {fromLocation && toLocation && (
-        <div className="absolute top-3 left-3 z-[500] bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-lg w-[255px] sm:w-[280px] overflow-hidden">
+        <div ref={altPanelRef} className="absolute top-3 left-3 z-[500] bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl shadow-lg w-[255px] sm:w-[280px] overflow-hidden">
           <div className="px-4 py-3 space-y-1.5">
             {/* Active route badge */}
             <div className="flex items-center justify-between gap-2">

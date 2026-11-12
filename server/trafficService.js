@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { buildOfficialRoutes, DHAKA_BYPASS_WAYPOINTS, haversineKm, NODE_COORDINATES } from './routesConfig.js';
+import { buildOfficialRoutes, DHAKA_BYPASS_WAYPOINTS, haversineKm, NODE_COORDINATES, OFFICIAL_ROUTES_RAW } from './routesConfig.js';
 import { googleRoutesClient, openWeatherClient, wazeClient } from './apiClients.js';
 import { buildOsmRouteGeometry, decodeEncodedPolyline, findRouteCheckpoints, segmentPolylineWithOsmNames } from './osmRouter.js';
 
@@ -620,31 +620,116 @@ export async function predictJourneyService({ date, day, time, from, to }) {
     console.warn('[Google Routes] Query skipped/failed:', err.message);
   }
 
-  // 5. Correlate with 50 Official Dhaka Corridors
+  // 5. Correlate with Official Dhaka Corridors and Strategic Landmarks
   const routes = buildOfficialRoutes();
   let matchedCorridor = null;
-  let corridorPathSteps = [fTrim, tTrim];
 
+  // 5a. Direct corridor search
   for (const r of routes) {
     const parts = r.route_path.split('->').map(p => p.trim());
     const fIdx = parts.findIndex(p => p.toLowerCase() === fTrim.toLowerCase());
     const tIdx = parts.findIndex(p => p.toLowerCase() === tTrim.toLowerCase());
 
     if (fIdx !== -1 && tIdx !== -1 && fIdx !== tIdx) {
-      corridorPathSteps = fIdx < tIdx ? parts.slice(fIdx, tIdx + 1) : parts.slice(tIdx, fIdx + 1).reverse();
-      matchedCorridor = r;
-      break;
+      const sub = fIdx < tIdx ? parts.slice(fIdx, tIdx + 1) : parts.slice(tIdx, fIdx + 1).reverse();
+      if (sub.length > 2) {
+        matchedCorridor = r;
+        break;
+      }
     }
   }
 
+  // 5b. Resolve intermediate sequence across Dhaka road network (Direct Corridor -> BFS Transit -> Vector Projection)
+  const resolveCorridorSequence = () => {
+    // 1. Direct corridor with intermediate steps
+    for (const r of OFFICIAL_ROUTES_RAW) {
+      const parts = r.path.split('->').map(p => p.trim());
+      const fIdx = parts.findIndex(p => p.toLowerCase() === fTrim.toLowerCase());
+      const tIdx = parts.findIndex(p => p.toLowerCase() === tTrim.toLowerCase());
+      if (fIdx !== -1 && tIdx !== -1 && fIdx !== tIdx) {
+        const sub = fIdx < tIdx ? parts.slice(fIdx, tIdx + 1) : parts.slice(tIdx, fIdx + 1).reverse();
+        if (sub.length > 2) return sub;
+      }
+    }
+
+    // 2. BFS graph traversal over 50 connected corridors
+    const graph = {};
+    for (const r of OFFICIAL_ROUTES_RAW) {
+      const parts = r.path.split('->').map(p => p.trim());
+      for (let i = 0; i < parts.length - 1; i++) {
+        const u = parts[i];
+        const v = parts[i + 1];
+        if (!graph[u]) graph[u] = new Set();
+        if (!graph[v]) graph[v] = new Set();
+        graph[u].add(v);
+        graph[v].add(u);
+      }
+    }
+    const q = [[fTrim]];
+    const vis = new Set([fTrim.toLowerCase()]);
+    while (q.length > 0) {
+      const path = q.shift();
+      const curr = path[path.length - 1];
+      if (curr.toLowerCase() === tTrim.toLowerCase()) {
+        if (path.length > 2 && path.length <= 5) return path;
+        break;
+      }
+      for (const nxt of (graph[curr] || [])) {
+        if (!vis.has(nxt.toLowerCase())) {
+          vis.add(nxt.toLowerCase());
+          q.push([...path, nxt]);
+        }
+      }
+    }
+
+    // 3. Vector projection over strategic nodes & flyovers along travel corridor
+    const abLat = destCoords[0] - origCoords[0];
+    const abLon = destCoords[1] - origCoords[1];
+    const abLen2 = abLat * abLat + abLon * abLon;
+    const directDist = haversineKm(origCoords, destCoords);
+    const pool = [];
+    const allNodes = { ...NODE_COORDINATES };
+    for (const wp of DHAKA_BYPASS_WAYPOINTS) allNodes[wp.name] = wp.coords;
+
+    for (const [name, coord] of Object.entries(allNodes)) {
+      if (name.toLowerCase() === fTrim.toLowerCase() || name.toLowerCase() === tTrim.toLowerCase()) continue;
+      if (haversineKm(origCoords, coord) < 0.6 || haversineKm(destCoords, coord) < 0.6) continue;
+      const t = ((coord[0] - origCoords[0]) * abLat + (coord[1] - origCoords[1]) * abLon) / abLen2;
+      if (t <= 0.05 || t >= 0.95) continue;
+      const proj = [origCoords[0] + t * abLat, origCoords[1] + t * abLon];
+      const distFromCorridor = haversineKm(coord, proj);
+      const maxOffset = Math.max(1.0, Math.min(2.8, directDist * 0.32));
+      if (distFromCorridor <= maxOffset) {
+        pool.push({ name, coord, t });
+      }
+    }
+    pool.sort((a, b) => a.t - b.t);
+
+    const picked = [];
+    for (const item of pool) {
+      if (picked.every(p => haversineKm(p.coord, item.coord) >= 1.0)) {
+        picked.push(item);
+        if (picked.length >= 3) break;
+      }
+    }
+
+    if (picked.length > 0) {
+      return [fTrim, ...picked.map(p => p.name), tTrim];
+    }
+
+    return [fTrim, tTrim];
+  };
+
+  const corridorPathSteps = resolveCorridorSequence();
   const directDist = haversineKm(origCoords, destCoords);
 
   // 6a. Build Primary Route OSM Road Geometry + Real Street Segments first so distance matches actual road path
   const primaryWaypoints = [origCoords];
   if (corridorPathSteps.length > 2) {
     for (const stepName of corridorPathSteps.slice(1, -1)) {
-      if (NODE_COORDINATES[stepName]) {
-        primaryWaypoints.push(NODE_COORDINATES[stepName]);
+      const c = NODE_COORDINATES[stepName] || DHAKA_BYPASS_WAYPOINTS.find(w => w.name === stepName)?.coords;
+      if (c) {
+        primaryWaypoints.push(c);
       }
     }
   }
@@ -678,7 +763,7 @@ export async function predictJourneyService({ date, day, time, from, to }) {
     }
   }
 
-  const primarySegments = rawPrimarySegments.map(seg => {
+  const enrichSegmentsWithCsv = (segs) => (segs || []).map(seg => {
     const obs = seg.way_id ? latestByOsmWay[seg.way_id] : null;
     if (!obs) return seg;
     const rawLvl = String(obs.traffic_level || 'NORMAL').toUpperCase();
@@ -699,7 +784,84 @@ export async function predictJourneyService({ date, day, time, from, to }) {
     };
   });
 
-  const primaryCheckpoints = findRouteCheckpoints(primaryRoadCoords, fTrim, tTrim, corridorPathSteps);
+  const primarySegments = enrichSegmentsWithCsv(rawPrimarySegments);
+
+  let primaryCheckpoints = findRouteCheckpoints(primaryRoadCoords, fTrim, tTrim, corridorPathSteps);
+  if (primaryCheckpoints.length === 0 && corridorPathSteps.length > 2) {
+    primaryCheckpoints = corridorPathSteps.slice(1, -1).map(name => ({
+      name,
+      coords: NODE_COORDINATES[name] || DHAKA_BYPASS_WAYPOINTS.find(w => w.name === name)?.coords || null
+    })).filter(c => c.coords);
+  }
+
+  // Build readable Route Path steps (major places/areas along route, supplemented by key named roads if sparse)
+  const GENERIC_ROAD_LABELS = new Set([
+    'Primary Arterial Road', 'Primary Link Road', 'Main Trunk Road', 'Trunk Link Road',
+    'Secondary Road', 'Secondary Link Road', 'Urban Street', 'Connector Street',
+    'Expressway / Highway', 'Expressway Ramp', 'Dhaka Road Segment',
+  ]);
+
+  const buildReadableRouteSteps = (coords, segments = [], baseSteps = [], viaLabel = null) => {
+    if (Array.isArray(baseSteps) && baseSteps.length > 2) return baseSteps;
+    const cps = findRouteCheckpoints(coords, fTrim, tTrim, []);
+    const middle = cps.map(c => c.name);
+
+    if (viaLabel && !middle.some(m => m.toLowerCase() === viaLabel.toLowerCase())) {
+      middle.splice(Math.floor(middle.length / 2), 0, viaLabel);
+    }
+
+    if (middle.length < 2 && Array.isArray(segments) && segments.length > 0) {
+      const majorRoads = segments
+        .filter(s =>
+          s.name &&
+          !GENERIC_ROAD_LABELS.has(s.name) &&
+          !s.name.includes('→') &&
+          (s.distance_km || 0) >= 0.2
+        )
+        .sort((a, b) => (b.distance_km || 0) - (a.distance_km || 0));
+      for (const rd of majorRoads) {
+        if (middle.length >= 3) break;
+        if (!middle.some(m => m.toLowerCase() === rd.name.toLowerCase())) {
+          middle.push(rd.name);
+        }
+      }
+    }
+
+    // Fallback for sparse/disconnected outer corridors: pick up to 2 real Dhaka nodes along the corridor line
+    if (middle.length === 0 && coords.length >= 2) {
+      const a = coords[0];
+      const b = coords[coords.length - 1];
+      const abLat = b[0] - a[0];
+      const abLon = b[1] - a[1];
+      const abLen2 = abLat * abLat + abLon * abLon;
+      if (abLen2 > 0) {
+        const nearby = [];
+        for (const [name, c] of Object.entries(NODE_COORDINATES)) {
+          if (name === fTrim || name === tTrim) continue;
+          if (haversineKm(a, c) < 1.2 || haversineKm(b, c) < 1.2) continue;
+          const t = Math.max(0, Math.min(1, ((c[0] - a[0]) * abLat + (c[1] - a[1]) * abLon) / abLen2));
+          if (t <= 0.1 || t >= 0.9) continue;
+          const proj = [a[0] + t * abLat, a[1] + t * abLon];
+          if (haversineKm(c, proj) <= 1.8) {
+            nearby.push({ name, c, t });
+          }
+        }
+        nearby.sort((x, y) => x.t - y.t);
+        const picked = [];
+        for (const item of nearby) {
+          if (picked.every(p => haversineKm(p.c, item.c) >= 1.8)) {
+            picked.push(item);
+            middle.push(item.name);
+          }
+          if (picked.length >= 3) break;
+        }
+      }
+    }
+
+    return [fTrim, ...middle.slice(0, 4), tTrim];
+  };
+
+  const primaryReadableSteps = buildReadableRouteSteps(primaryRoadCoords, primarySegments, corridorPathSteps);
 
   // Consistent distance, free-flow baseline, travel time, delay, and speed calculations
   const distKm = useGoogleGeometry
@@ -778,6 +940,22 @@ export async function predictJourneyService({ date, day, time, from, to }) {
       const label = isAsciiShort ? rawDesc : `Alternate Corridor #${alternativeRoutes.length + 1}`;
       seenVia.add(label.toLowerCase());
 
+      const gAltSegs = enrichSegmentsWithCsv(
+        gAltCoords.length >= 2 ? segmentPolylineWithOsmNames(gAltCoords, `${fTrim} → ${tTrim}`) : []
+      );
+      const altCheckpoints = findRouteCheckpoints(
+        gAltCoords.length >= 2 ? gAltCoords : primaryRoadCoords,
+        fTrim,
+        tTrim,
+        []
+      );
+      const altSteps = buildReadableRouteSteps(
+        gAltCoords.length >= 2 ? gAltCoords : primaryRoadCoords,
+        gAltSegs,
+        [],
+        isAsciiShort ? rawDesc : null
+      );
+
       alternativeRoutes.push({
         id: `alt-${alternativeRoutes.length + 1}`,
         name: rawDesc || label,
@@ -786,6 +964,8 @@ export async function predictJourneyService({ date, day, time, from, to }) {
         is_estimate: !isNow,
         coords: gAltCoords.length >= 2 ? gAltCoords[Math.floor(gAltCoords.length / 2)] : null,
         road_coords: gAltCoords.length >= 2 ? gAltCoords : primaryRoadCoords,
+        road_segments: gAltSegs,
+        checkpoints: altCheckpoints,
         distance_km: altDist,
         free_flow_time_min: altFreeFlow,
         travel_time_min: altTt,
@@ -794,8 +974,8 @@ export async function predictJourneyService({ date, day, time, from, to }) {
         bypass_speed_kmh: altSpeed,
         traffic_prediction: altLevel,
         google_maps_url: `https://www.google.com/maps/dir/?api=1&origin=${origCoords[0]},${origCoords[1]}&destination=${destCoords[0]},${destCoords[1]}&travelmode=driving`,
-        path: `${fTrim} -> ${label} -> ${tTrim}`,
-        steps: [fTrim, label, tTrim],
+        path: altSteps.join(' -> '),
+        steps: altSteps,
         reason: rawDesc
           ? `Alternative driving route via ${rawDesc} (Google Maps Routes API v2 baseline).`
           : 'Alternative driving corridor returned by Google Maps Routes API v2.'
@@ -836,6 +1016,16 @@ export async function predictJourneyService({ date, day, time, from, to }) {
       const altLevel = classifyTrafficLevel(bypassMult, altDelay, altSpeed);
 
       const bypassGmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origCoords[0]},${origCoords[1]}&destination=${destCoords[0]},${destCoords[1]}&waypoints=${wp.coords[0]},${wp.coords[1]}&travelmode=driving`;
+      const altCoords = osmAlt.coordinates.length >= 2 ? osmAlt.coordinates : [origCoords, wp.coords, destCoords];
+      const altSegments = enrichSegmentsWithCsv(osmAlt.segments);
+      const altCheckpoints = findRouteCheckpoints(altCoords, fTrim, tTrim, []);
+      if (!altCheckpoints.some(c => c.name.toLowerCase().includes(wp.name.toLowerCase()))) {
+        altCheckpoints.splice(Math.floor(altCheckpoints.length / 2), 0, { name: wp.name, coords: wp.coords });
+      }
+      const altSteps = buildReadableRouteSteps(altCoords, altSegments, [], `${wp.name} (${wp.tag})`);
+      if (!altSteps.some(s => s.toLowerCase().includes(wp.name.toLowerCase()))) {
+        altSteps.splice(Math.floor(altSteps.length / 2), 0, `${wp.name} (${wp.tag})`);
+      }
 
       candidateBypasses.push({
         name: `OSM Bypass via ${wp.name}`,
@@ -843,7 +1033,9 @@ export async function predictJourneyService({ date, day, time, from, to }) {
         tag: wp.tag,
         is_estimate: true,
         coords: wp.coords,
-        road_coords: osmAlt.coordinates.length >= 2 ? osmAlt.coordinates : [origCoords, wp.coords, destCoords],
+        road_coords: altCoords,
+        road_segments: altSegments,
+        checkpoints: altCheckpoints,
         distance_km: altDist,
         free_flow_time_min: freeAltTt,
         travel_time_min: altTt,
@@ -852,8 +1044,8 @@ export async function predictJourneyService({ date, day, time, from, to }) {
         bypass_speed_kmh: altSpeed,
         traffic_prediction: altLevel,
         google_maps_url: bypassGmapsUrl,
-        path: `${fTrim} -> ${wp.name} [${wp.tag}] -> ${tTrim}`,
-        steps: [fTrim, `${wp.name} (${wp.tag})`, tTrim],
+        path: altSteps.join(' -> '),
+        steps: altSteps,
         reason:
           wp.tag === 'Expressway'
             ? 'Estimated route via elevated expressway corridor with reduced signal bottlenecks.'
@@ -910,8 +1102,8 @@ export async function predictJourneyService({ date, day, time, from, to }) {
     primary_route: {
       name: `${fTrim} to ${tTrim}`,
       route_code: matchedCorridor?.route_code || 'R-COMMUTER',
-      path: corridorPathSteps.join(' -> '),
-      steps: corridorPathSteps,
+      path: primaryReadableSteps.join(' -> '),
+      steps: primaryReadableSteps,
       origin_coords: origCoords,
       dest_coords: destCoords,
       distance_km: distKm,
