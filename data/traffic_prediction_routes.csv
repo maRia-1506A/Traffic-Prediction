@@ -49,3 +49,53 @@ R47,Banani -> Kakoli -> Gulshan 1 -> Gulshan 2
 R48,Mirpur 2 -> Mirpur 10 -> Agargaon -> Farmgate -> Motijheel
 R49,Daffodil International University -> Khagan -> Beribadh -> Rampura -> Badda Link Road
 R50,Gulshan 2 -> Notun Bazar -> Kuril -> Uttara -> Gazipur
+
+
+R51, Airport -> Banani
+R52,Asad Gate -> Farmgate
+R53,Badda -> Rampura Bridge
+R54,Bijoy Sarani -> Mohakhali
+R55,Dhanmondi 27 -> Science Lab
+R56,ECB Chattar -> Airport
+R57,ECB Chattar -> Banani
+R58,ECB Chattar -> Kuril
+R59,ECB Chattar -> Mirpur 12
+R60,Farmgate -> Shahbagh
+R61,Gabtoli -> Dhanmondi 27
+R62,Gabtoli -> Kalyanpur
+R63,Gabtoli -> Savar
+R64,Gulistan -> Sadarghat
+R65,Gulshan 1 -> Badda Link Road
+R66,Gulshan 1 -> Mohakhali
+R67,Gulshan 2 -> Gulshan 1
+R68,Jatrabari -> Sayedabad
+R69,Kakrail -> Motijheel
+R70,Kalyanpur -> Shyamoli
+R71,Karwan Bazar -> Shahbagh
+R72,Kuril -> Mohakhali
+R73,Kuril -> Notun Bazar
+R74,Malibagh -> Kakrail
+R75,Mirpur 1 -> Dhanmondi 27
+R76,Mirpur 1 -> Gabtoli
+R77,Mirpur 10 -> Agargaon
+R78,Mirpur 10 -> ECB Chattar
+R79,Mirpur 10 -> Karwan Bazar
+R80,Mirpur 12 -> ECB Chattar
+R81,Mirpur 12 -> Mirpur 10
+R82,Mohammadpur -> Dhanmondi 27
+R83,Mohammadpur -> Farmgate
+R84,Motijheel -> Gulistan
+R85,Postogola -> Jatrabari
+R86,Rampura -> Malibagh
+R87,Savar -> Ashulia
+R88,Savar -> Dhanmondi
+R89,Savar -> Gabtoli
+R90,Sayedabad -> Motijheel
+R91,Science Lab -> New Market
+R92,Science Lab -> Shahbagh
+R93,Shahbagh -> Motijheel
+R94,Shyamoli -> Asad Gate
+R95,Tongi -> Uttara
+R96,Uttara -> Airport
+R97,Uttara -> Kuril
+R98,Uttara -> Mohakhali

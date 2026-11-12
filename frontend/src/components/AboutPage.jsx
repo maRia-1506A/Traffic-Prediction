@@ -6,13 +6,12 @@ export default function AboutPage() {
 
       {/* Header */}
       <div className="text-center space-y-2">
-        <div className="w-14 h-14 rounded-2xl bg-blue-600 flex items-center justify-center mx-auto">
-          <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-          </svg>
+        <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto shadow-sm overflow-hidden bg-white border border-slate-100 p-1">
+          <img
+            src="/logo/logo.svg"
+            alt="TrafficPulse Logo"
+            className="w-full h-full object-contain rounded-xl"
+          />
         </div>
         <h1 className="text-2xl font-bold text-slate-800">About This Project</h1>
         <p className="text-sm text-slate-500">TrafficPulse — Dhaka Traffic Prediction</p>
@@ -92,15 +91,15 @@ export default function AboutPage() {
         </h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            { name: 'React 19',           desc: 'Frontend UI' },
-            { name: 'Node.js / Express',   desc: 'Backend API' },
-            { name: 'Tailwind CSS',        desc: 'Styling' },
-            { name: 'Leaflet',             desc: 'Map visualization' },
-            { name: 'OpenStreetMap',        desc: 'Road network data' },
-            { name: 'Google Maps API',      desc: 'Live routing' },
-            { name: 'OpenWeatherMap',       desc: 'Weather data' },
-            { name: 'Python',              desc: 'Data collection' },
-            { name: 'Vite',                desc: 'Build tooling' },
+            { name: 'React 19', desc: 'Frontend UI' },
+            { name: 'Node.js / Express', desc: 'Backend API' },
+            { name: 'Tailwind CSS', desc: 'Styling' },
+            { name: 'Leaflet', desc: 'Map visualization' },
+            { name: 'OpenStreetMap', desc: 'Road network data' },
+            { name: 'Google Maps API', desc: 'Live routing' },
+            { name: 'OpenWeatherMap', desc: 'Weather data' },
+            { name: 'Python', desc: 'Data collection' },
+            { name: 'Vite', desc: 'Build tooling' },
           ].map(t => (
             <div key={t.name} className="bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
               <p className="text-sm font-medium text-slate-800">{t.name}</p>
@@ -110,25 +109,81 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Team */}
-      <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-3">
+      {/* Team / Contributors */}
+      <section className="bg-white rounded-2xl border border-slate-200 p-6 space-y-4">
         <h2 className="text-base font-semibold text-slate-800 flex items-center gap-2">
           <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
           </svg>
-          Project Team
+          Contributors
         </h2>
         <p className="text-sm text-slate-600">
-          This is an academic project developed as part of a university coursework on
-          traffic prediction and intelligent transportation systems.
+          Developed as an intelligent transportation system and predictive analytics project for Greater Dhaka by:
         </p>
-        <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 text-sm text-slate-600">
-          <p className="font-medium text-slate-800">Contributors:</p>
-          <ul className="mt-2 space-y-1 list-disc pl-5">
-            <li>Zannatul Maria — Frontend & Road Data</li>
-            <li>Team Member — Google Maps API & Backend</li>
-          </ul>
+        <div className="flex flex-col gap-3 pt-1">
+          {[
+            {
+              name: 'Zannatul Farzana Maria',
+              github: 'https://github.com/maRia-1506A',
+              photo: '/team/zannatul-maria.png',
+              initials: 'ZM',
+              ringColor: 'ring-indigo-400',
+              badgeColor: 'bg-indigo-50 border-indigo-200 text-indigo-700',
+              avatarBg: 'bg-indigo-600',
+            },
+            {
+              name: 'K. M. Fathum Mubin',
+              github: 'https://github.com/mubin25s',
+              photo: '/team/fathum-mubin.jpg',
+              initials: 'FM',
+              ringColor: 'ring-blue-400',
+              badgeColor: 'bg-blue-50 border-blue-200 text-blue-700',
+              avatarBg: 'bg-blue-600',
+            },
+            {
+              name: 'Rakib Rohan',
+              github: 'https://github.com/Rakib255004',
+              photo: '/team/rakib-rohan.png',
+              initials: 'RR',
+              ringColor: 'ring-emerald-400',
+              badgeColor: 'bg-emerald-50 border-emerald-200 text-emerald-700',
+              avatarBg: 'bg-emerald-600',
+            },
+          ].map(c => (
+            <div key={c.name} className="flex items-center gap-4 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200 hover:border-slate-300 hover:bg-white transition-all duration-150 shadow-2xs">
+              {/* Small circular photo */}
+              <div className={`w-12 h-12 rounded-full ring-2 ${c.ringColor} ring-offset-2 overflow-hidden shrink-0 ${c.avatarBg}`}>
+                <img
+                  src={c.photo}
+                  alt={c.name}
+                  className="w-full h-full object-cover object-top"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.parentElement.classList.add('flex', 'items-center', 'justify-center');
+                    e.target.parentElement.innerHTML = `<span class="text-white font-bold text-sm">${c.initials}</span>`;
+                  }}
+                />
+              </div>
+              {/* Name & badge */}
+              <div className="min-w-0">
+                <a
+                  href={c.github}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm font-bold text-slate-900 hover:text-blue-600 transition-colors leading-snug flex items-center gap-1 group/link"
+                >
+                  {c.name}
+                  <svg className="w-3 h-3 text-slate-400 group-hover/link:text-blue-500 transition-colors shrink-0" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z" />
+                  </svg>
+                </a>
+                <span className={`inline-block text-[10px] font-semibold px-2.5 py-0.5 rounded-full mt-1 border ${c.badgeColor}`}>
+                  Contributor
+                </span>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

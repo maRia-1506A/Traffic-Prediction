@@ -35,14 +35,14 @@ const formatTime12 = (t) => {
 
 // ── Icon Factories ────────────────────────────────────────────────────────────
 const makePin = (fill, label = '') => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="40" viewBox="0 0 32 40" style="display:block">
     <path fill="${fill}" stroke="#ffffff" stroke-width="2"
       d="M16 1.5 C8.2 1.5 2 7.7 2 15.5 C2 25.5 16 38.5 16 38.5 C16 38.5 30 25.5 30 15.5 C30 7.7 23.8 1.5 16 1.5Z"/>
     <circle cx="16" cy="15.5" r="5.5" fill="#ffffff"/>
   </svg>`;
   return L.divIcon({
     className: '',
-    html: `<div title="${label}" style="transform:translate(-16px,-39px);filter:drop-shadow(0 2px 5px rgba(0,0,0,0.35))">${svg}</div>`,
+    html: `<div title="${label}" style="width:32px;height:40px;filter:drop-shadow(0 2px 5px rgba(0,0,0,0.35))">${svg}</div>`,
     iconSize: [32, 40],
     iconAnchor: [16, 39],
     popupAnchor: [0, -40],
@@ -50,14 +50,14 @@ const makePin = (fill, label = '') => {
 };
 
 const makeWarningIcon = () => {
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="24" viewBox="0 0 26 24">
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="26" height="24" viewBox="0 0 26 24" style="display:block">
     <path d="M13 1.5 L24.5 22 L1.5 22 Z" fill="#f59e0b" stroke="#ffffff" stroke-width="2" stroke-linejoin="round"/>
     <rect x="12" y="8.5" width="2" height="6.5" rx="1" fill="#1e293b"/>
     <circle cx="13" cy="18" r="1.25" fill="#1e293b"/>
   </svg>`;
   return L.divIcon({
     className: '',
-    html: `<div style="transform:translate(-13px,-12px);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">${svg}</div>`,
+    html: `<div style="width:26px;height:24px;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.3))">${svg}</div>`,
     iconSize: [26, 24],
     iconAnchor: [13, 12],
     popupAnchor: [0, -14],
@@ -67,11 +67,9 @@ const makeWarningIcon = () => {
 const makeBypassIcon = (color = '#2563eb', label = '') =>
   L.divIcon({
     className: '',
-    html: `<div title="${label}" style="transform:translate(-11px,-11px)">
-      <div style="width:22px;height:22px;border-radius:50%;background:${color};border:2px solid #fff;
-        display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;
-        box-shadow:0 2px 6px rgba(0,0,0,0.28);">↗</div>
-    </div>`,
+    html: `<div title="${label}" style="width:22px;height:22px;border-radius:50%;background:${color};border:2px solid #fff;
+      display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;
+      box-shadow:0 2px 6px rgba(0,0,0,0.28);">↗</div>`,
     iconSize: [22, 22],
     iconAnchor: [11, 11],
     popupAnchor: [0, -12],
@@ -135,11 +133,20 @@ export default function JourneyRouteMap({
     // Bottom-right zoom control matching reference screenshot
     L.control.zoom({ position: 'bottomright' }).addTo(map);
 
-    // Detailed OpenStreetMap street & label tiles
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(map);
+    // Detailed street & label tiles with World Street fallback
+    let fellBack = false;
+    const baseTiles = L.tileLayer('https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: '0123',
+      attribution: '&copy; Google Maps &copy; Dhaka TrafficPulse',
+    });
+    baseTiles.on('tileerror', () => {
+      if (!fellBack) {
+        fellBack = true;
+        baseTiles.setUrl('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}');
+      }
+    });
+    baseTiles.addTo(map);
 
     // Dedicated panes so selected routes always sit cleanly above unselected routes
     map.createPane('corridorPane').style.zIndex = 410;
@@ -179,42 +186,65 @@ export default function JourneyRouteMap({
 
     if (!showCorridors || !corridorsData?.length) return;
 
+    const haversineKm = (a, b) => {
+      const R = 6371;
+      const dLat = ((b[0] - a[0]) * Math.PI) / 180;
+      const dLon = ((b[1] - a[1]) * Math.PI) / 180;
+      const x = Math.sin(dLat / 2) ** 2 + Math.cos((a[0] * Math.PI) / 180) * Math.cos((b[0] * Math.PI) / 180) * Math.sin(dLon / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+    };
+
     corridorsData.forEach(c => {
       if (!c.coordinates || c.coordinates.length < 2) return;
       const color = TRAFFIC_COLORS[c.traffic_level] || TRAFFIC_COLORS.Low;
 
-      // Subtle white road casing so verified traffic corridors look crisp
-      L.polyline(c.coordinates, {
-        pane: 'corridorPane',
-        color: '#ffffff',
-        weight: 4.5,
-        opacity: 0.55,
-        lineCap: 'round',
-        lineJoin: 'round',
-        interactive: false,
-      }).addTo(cl);
+      // Split out unrealistic straight-line jumps (>0.85 km) outside local OSM GeoJSON bounds
+      const roadSegments = [];
+      let seg = [c.coordinates[0]];
+      for (let i = 1; i < c.coordinates.length; i++) {
+        if (haversineKm(c.coordinates[i - 1], c.coordinates[i]) <= 0.85) {
+          seg.push(c.coordinates[i]);
+        } else {
+          if (seg.length >= 2) roadSegments.push(seg);
+          seg = [c.coordinates[i]];
+        }
+      }
+      if (seg.length >= 2) roadSegments.push(seg);
 
-      L.polyline(c.coordinates, {
-        pane: 'corridorPane',
-        color,
-        weight: 2.8,
-        opacity: c.traffic_level === 'High' ? 0.72 : 0.55,
-        lineCap: 'round',
-        lineJoin: 'round',
-      })
-        .bindPopup(
-          popupShell(`
-            <div style="font-weight:700;font-size:13px;margin-bottom:4px">${c.route_id}</div>
-            ${badgeHtml(c.traffic_level)}
-            <div style="margin-top:6px;color:#475569">
-              <div>Source: <b>Monitored Corridor Telemetry</b></div>
-              <div>Observed Level: <b>${c.raw_level}</b></div>
-              <div>Speed: <b>${c.speed_kmh} km/h</b>${c.delay_min > 0 ? ` · Delay: <b>+${c.delay_min} min</b>` : ''}</div>
-              <div style="font-size:11px;color:#64748b;margin-top:3px">Updated: ${c.last_updated}</div>
-            </div>
-          `)
-        )
-        .addTo(cl);
+      roadSegments.forEach(segCoords => {
+        // Subtle white road casing so verified traffic corridors look crisp
+        L.polyline(segCoords, {
+          pane: 'corridorPane',
+          color: '#ffffff',
+          weight: 3.6,
+          opacity: 0.65,
+          lineCap: 'round',
+          lineJoin: 'round',
+          interactive: false,
+        }).addTo(cl);
+
+        L.polyline(segCoords, {
+          pane: 'corridorPane',
+          color,
+          weight: 2.3,
+          opacity: c.traffic_level === 'High' ? 0.82 : 0.72,
+          lineCap: 'round',
+          lineJoin: 'round',
+        })
+          .bindPopup(
+            popupShell(`
+              <div style="font-weight:700;font-size:13px;margin-bottom:4px">${c.route_id}</div>
+              ${badgeHtml(c.traffic_level)}
+              <div style="margin-top:6px;color:#475569">
+                <div>Source: <b>Monitored Corridor Telemetry</b></div>
+                <div>Observed Level: <b>${c.raw_level}</b></div>
+                <div>Speed: <b>${c.speed_kmh} km/h</b>${c.delay_min > 0 ? ` · Delay: <b>+${c.delay_min} min</b>` : ''}</div>
+                <div style="font-size:11px;color:#64748b;margin-top:3px">Updated: ${c.last_updated}</div>
+              </div>
+            `)
+          )
+          .addTo(cl);
+      });
     });
   }, [corridorsData, showCorridors]);
 
@@ -241,11 +271,22 @@ export default function JourneyRouteMap({
       const st = ALT_STYLES[idx % ALT_STYLES.length];
       const isSelected = selectedAltIndex === idx;
       const paneName = isSelected ? 'selectedRoutePane' : 'unselectedRoutePane';
-      const pts = alt.road_coords?.length >= 2
+      const rawPts = alt.road_coords?.length >= 2
         ? alt.road_coords
         : alt.coords
         ? [origCoords, alt.coords, destCoords]
         : [origCoords, destCoords];
+
+      const pts = rawPts.map(p => [...p]);
+      if (pts.length >= 2) {
+        if (Math.hypot(pts[0][0] - origCoords[0], pts[0][1] - origCoords[1]) > 0.0001) {
+          pts.unshift(origCoords);
+        }
+        const lastIdx = pts.length - 1;
+        if (Math.hypot(pts[lastIdx][0] - destCoords[0], pts[lastIdx][1] - destCoords[1]) > 0.0001) {
+          pts.push(destCoords);
+        }
+      }
 
       if (isSelected) {
         selectedAltBounds = [origCoords, destCoords, ...pts];
@@ -348,7 +389,7 @@ export default function JourneyRouteMap({
     const formattedTime = formatTime12(selectedTime);
 
     // Prepare road segments along OSM street geometry
-    const segments = primaryRoute?.road_segments?.length
+    const sourceSegments = primaryRoute?.road_segments?.length
       ? primaryRoute.road_segments
       : [{
           id: 'primary-0',
@@ -360,13 +401,64 @@ export default function JourneyRouteMap({
             : [origCoords, destCoords],
         }];
 
+    // Clone segments so we don't mutate props
+    const segments = sourceSegments.map(s => ({
+      ...s,
+      coordinates: Array.isArray(s.coordinates) ? s.coordinates.map(c => [...c]) : []
+    })).filter(s => s.coordinates.length >= 2);
+
+    if (segments.length === 0) {
+      segments.push({
+        id: 'primary-fallback',
+        name: `${fromLocation} → ${toLocation}`,
+        highway: 'primary',
+        distance_km: primaryRoute?.distance_km || 5.0,
+        coordinates: [origCoords, destCoords]
+      });
+    }
+
+    // Connect exact requested start point to the first segment
+    const firstSeg = segments[0];
+    if (Math.hypot(firstSeg.coordinates[0][0] - origCoords[0], firstSeg.coordinates[0][1] - origCoords[1]) > 0.00005) {
+      firstSeg.coordinates.unshift(origCoords);
+    }
+
+    // Connect exact requested destination point to the last segment
+    const lastSeg = segments[segments.length - 1];
+    const lastIdx = lastSeg.coordinates.length - 1;
+    if (Math.hypot(lastSeg.coordinates[lastIdx][0] - destCoords[0], lastSeg.coordinates[lastIdx][1] - destCoords[1]) > 0.00005) {
+      lastSeg.coordinates.push(destCoords);
+    }
+
     // Collect bounds across all route points
     segments.forEach(seg => seg.coordinates?.forEach(pt => bounds.push(pt)));
 
     // 1. Subtle dark shadow & crisp white halo under the primary route
-    const fullCoords = primaryRoute?.road_coords?.length >= 2
-      ? primaryRoute.road_coords
-      : segments.flatMap(s => s.coordinates || []);
+    let fullCoords = [];
+    segments.forEach((seg) => {
+      seg.coordinates.forEach((pt) => {
+        if (fullCoords.length === 0) {
+          fullCoords.push(pt);
+        } else {
+          const prev = fullCoords[fullCoords.length - 1];
+          if (Math.hypot(prev[0] - pt[0], prev[1] - pt[1]) > 0.00001) {
+            fullCoords.push(pt);
+          }
+        }
+      });
+    });
+
+    if (fullCoords.length < 2) {
+      fullCoords = [origCoords, destCoords];
+    } else {
+      if (Math.hypot(fullCoords[0][0] - origCoords[0], fullCoords[0][1] - origCoords[1]) > 0.00005) {
+        fullCoords.unshift(origCoords);
+      }
+      const lastFIdx = fullCoords.length - 1;
+      if (Math.hypot(fullCoords[lastFIdx][0] - destCoords[0], fullCoords[lastFIdx][1] - destCoords[1]) > 0.00005) {
+        fullCoords.push(destCoords);
+      }
+    }
 
     const primaryPane = isPrimarySelected ? 'selectedRoutePane' : 'unselectedRoutePane';
 
@@ -531,8 +623,20 @@ export default function JourneyRouteMap({
       marker.addTo(rl);
     }
 
-    // 5. Origin Marker (Green pin + label positioned clear of route)
+    // 5. Origin Marker (Green pin + label touching route directly)
     const origIsSouth = origCoords[0] <= destCoords[0];
+    L.circleMarker(origCoords, {
+      pane: primaryPane,
+      radius: 4.5,
+      fillColor: '#16a34a',
+      color: '#ffffff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 1,
+      interactive: false,
+      zIndexOffset: 999,
+    }).addTo(rl);
+
     L.marker(origCoords, { icon: makePin('#16a34a', fromLocation), zIndexOffset: 1000 })
       .bindTooltip(
         `<span style="color:#15803d">${fromLocation}</span> <span style="color:#64748b;font-weight:500">(Start)</span>`,
@@ -551,7 +655,19 @@ export default function JourneyRouteMap({
       )
       .addTo(rl);
 
-    // 6. Destination Marker (Red pin + label positioned clear of route)
+    // 6. Destination Marker (Red pin + label touching route directly)
+    L.circleMarker(destCoords, {
+      pane: primaryPane,
+      radius: 4.5,
+      fillColor: '#dc2626',
+      color: '#ffffff',
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 1,
+      interactive: false,
+      zIndexOffset: 999,
+    }).addTo(rl);
+
     L.marker(destCoords, { icon: makePin('#dc2626', toLocation), zIndexOffset: 1000 })
       .bindTooltip(
         `<span style="color:#dc2626">${toLocation} (End Point)</span>`,

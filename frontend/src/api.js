@@ -169,6 +169,19 @@ export async function fetchWaypoints() {
   };
 }
 
+export async function fetchCorridorsOverlay() {
+  try {
+    const res = await fetch(`${API_BASE}/corridors/osm-overlay`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success) return json;
+    }
+  } catch (err) {
+    console.warn('[API] /api/corridors/osm-overlay unavailable:', err.message);
+  }
+  return { success: false, corridors: [], isOffline: true };
+}
+
 export async function fetchHistory(params = {}) {
   try {
     const query = new URLSearchParams();
@@ -356,4 +369,68 @@ export async function predictJourneyApi(payload) {
 
   // Fallback to local client-side prediction engine
   return predictJourneyTraffic(payload);
+}
+
+export async function measureExactRoadRoute(origin, destination) {
+  try {
+    const res = await fetch(`${API_BASE}/measure-route`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ origin, destination })
+    });
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success && json.data) {
+        return json.data;
+      }
+    }
+  } catch (err) {
+    console.warn('[API] /api/measure-route unavailable, trying OSRM fallback:', err.message);
+  }
+
+  // Fallback: public OSRM driving engine
+  try {
+    const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${destination[1]},${destination[0]}?overview=full&geometries=geojson`;
+    const res = await fetch(osrmUrl);
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.routes && data.routes[0]) {
+        const r = data.routes[0];
+        const coords = r.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+        const distKm = Number((r.distance / 1000).toFixed(2));
+        const estTime = Math.max(2, Math.round(r.duration / 60));
+        return {
+          road_distance_km: distKm,
+          direct_distance_km: Number(calcHaversineKm(origin, destination).toFixed(2)),
+          coordinates: coords,
+          est_travel_time_min: estTime,
+          city_speed_kmh: 22.0,
+          roads: []
+        };
+      }
+    }
+  } catch (e) {
+    // fallback to mathematical winding
+  }
+
+  const direct = calcHaversineKm(origin, destination);
+  const roadEst = Number((direct * 1.32).toFixed(2));
+  return {
+    road_distance_km: roadEst,
+    direct_distance_km: Number(direct.toFixed(2)),
+    coordinates: [origin, destination],
+    est_travel_time_min: Math.max(2, Math.round((roadEst / 22) * 60)),
+    city_speed_kmh: 22.0,
+    roads: []
+  };
+}
+
+function calcHaversineKm(c1, c2) {
+  const R = 6371;
+  const dLat = (c2[0] - c1[0]) * Math.PI / 180;
+  const dLon = (c2[1] - c1[1]) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.cos(c1[0] * Math.PI / 180) * Math.cos(c2[0] * Math.PI / 180) *
+            Math.sin(dLon / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
