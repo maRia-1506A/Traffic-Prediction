@@ -142,10 +142,29 @@ function RouteRecordsList({ routes }) {
         </div>
       </div>
 
+      {/* Legend */}
+      <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 px-1">
+        <span>Bar length = total records &middot; Color split = traffic breakdown</span>
+        <div className="flex items-center gap-3 font-medium">
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-emerald-500 inline-block" /> Normal
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-amber-400 inline-block" /> Slow
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm bg-rose-500 inline-block" /> Jam
+          </span>
+        </div>
+      </div>
+
       {/* Routes List */}
       <div className="max-h-[580px] overflow-y-auto space-y-2 pr-1.5">
         {filtered.map((r, idx) => {
           const widthPct = Math.max((r.value / maxVal) * 100, 1.5);
+          const nPct = r.normalPct ?? (r.value > 0 ? Math.max(0, 100 - r.pct) : 0);
+          const sPct = r.slowPct ?? 0;
+          const jPct = r.jamPct ?? r.pct ?? 0;
           return (
             <div
               key={r.route_id}
@@ -166,12 +185,36 @@ function RouteRecordsList({ routes }) {
                 {r.route_name || r.label}
               </span>
 
-              {/* Bar */}
-              <div className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden relative">
-                <div
-                  className="h-full rounded-full bg-blue-500 transition-all duration-300"
-                  style={{ width: `${widthPct}%` }}
-                />
+              {/* Stacked Percentage Bar */}
+              <div
+                className="flex-1 bg-slate-100 rounded-full h-4 overflow-hidden relative"
+                title={r.value > 0 ? `Normal: ${nPct}% (${r.normal ?? 0}) | Slow: ${sPct}% (${r.slow ?? 0}) | Jam: ${jPct}% (${r.jam ?? 0})` : 'No records yet'}
+              >
+                {r.value > 0 && (
+                  <div
+                    className="h-full rounded-full overflow-hidden flex transition-all duration-300"
+                    style={{ width: `${widthPct}%` }}
+                  >
+                    {nPct > 0 && (
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-300"
+                        style={{ width: `${nPct}%` }}
+                      />
+                    )}
+                    {sPct > 0 && (
+                      <div
+                        className="h-full bg-amber-400 transition-all duration-300"
+                        style={{ width: `${sPct}%` }}
+                      />
+                    )}
+                    {jPct > 0 && (
+                      <div
+                        className="h-full bg-rose-500 transition-all duration-300"
+                        style={{ width: `${jPct}%` }}
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Count */}
@@ -179,13 +222,18 @@ function RouteRecordsList({ routes }) {
                 {r.value.toLocaleString()}
               </span>
 
-              {/* Congested % */}
-              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded w-20 text-center shrink-0 ${
-                r.pct >= 50
-                  ? 'bg-red-50 text-red-600 border border-red-100'
-                  : 'bg-slate-100 text-slate-600'
-              }`}>
-                {r.pct}% jam
+              {/* Breakdown % */}
+              <span
+                className={`text-[10px] font-semibold px-2 py-0.5 rounded w-24 text-center shrink-0 ${
+                  jPct >= 35
+                    ? 'bg-rose-50 text-rose-600 border border-rose-100'
+                    : sPct >= 30
+                    ? 'bg-amber-50 text-amber-700 border border-amber-100'
+                    : 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                }`}
+                title={`Normal ${nPct}% · Slow ${sPct}% · Jam ${jPct}%`}
+              >
+                {r.value > 0 ? `${nPct}% N · ${jPct}% J` : '0%'}
               </span>
             </div>
           );
@@ -294,8 +342,18 @@ export default function TrafficInsights() {
     // Congestion by hour (counted from 1 to 24 instead of 0)
     const hourBuckets = {};
     for (let h = 1; h <= 24; h++) {
-      hourBuckets[h] = { total: 0, congested: 0, jams: 0, speeds: [], delays: [] };
+      hourBuckets[h] = { total: 0, congested: 0, normal: 0, slow: 0, jams: 0, speeds: [], delays: [], worstRoute: null, worstDelay: -1 };
     }
+
+    const formatHourRange12 = (hr) => {
+      const fmt = (h24) => {
+        const norm = h24 % 24;
+        const ampm = norm >= 12 ? 'PM' : 'AM';
+        const h12 = norm % 12 || 12;
+        return `${h12}:00 ${ampm}`;
+      };
+      return `${fmt(hr)} – ${fmt(hr + 1)}`;
+    };
 
     records.forEach(r => {
       let h = parseInt(r.hour, 10);
@@ -312,14 +370,23 @@ export default function TrafficInsights() {
       const spd = parseFloat(r.traffic_speed_kmh);
       if (!isNaN(spd)) b.speeds.push(spd);
       const dly = parseFloat(r.traffic_delay_min);
-      if (!isNaN(dly)) b.delays.push(dly);
+      if (!isNaN(dly)) {
+        b.delays.push(dly);
+        if (dly > b.worstDelay && r.road_route_id) {
+          b.worstDelay = dly;
+          b.worstRoute = r.road_route_id;
+        }
+      }
 
       const lvl = (r.traffic_level || r.target_traffic_level || '').toUpperCase();
-      if (['SLOW', 'MODERATE', 'TRAFFIC_JAM', 'HEAVY', 'SEVERE'].includes(lvl)) {
-        b.congested++;
-      }
       if (['TRAFFIC_JAM', 'HEAVY', 'SEVERE'].includes(lvl)) {
         b.jams++;
+        b.congested++;
+      } else if (['SLOW', 'MODERATE'].includes(lvl)) {
+        b.slow++;
+        b.congested++;
+      } else {
+        b.normal++;
       }
     });
 
@@ -328,14 +395,25 @@ export default function TrafficInsights() {
         const hourNum = parseInt(h, 10);
         const avgSpeed = v.speeds.length ? Number((v.speeds.reduce((a, c) => a + c, 0) / v.speeds.length).toFixed(1)) : 35.0;
         const avgDelay = v.delays.length ? Number((v.delays.reduce((a, c) => a + c, 0) / v.delays.length).toFixed(1)) : 0.0;
+        const jamPct = v.total > 0 ? Math.round((v.jams / v.total) * 100) : 0;
+        const slowPct = v.total > 0 ? Math.round((v.slow / v.total) * 100) : 0;
+        const normalPct = v.total > 0 ? Math.max(0, 100 - jamPct - slowPct) : 0;
         return {
           label: hourNum === 24 ? '24:00 (Midnight)' : `${String(hourNum).padStart(2, '0')}:00`,
+          timeWindow: formatHourRange12(hourNum),
           hour: hourNum,
           period: getCommutePeriod(hourNum),
           value: v.congested,
           congested: v.congested,
+          normal: v.normal,
+          slow: v.slow,
           total: v.total,
           jams: v.jams,
+          normalPct,
+          slowPct,
+          jamPct,
+          worstRoute: v.worstRoute,
+          worstDelay: v.worstDelay > 0 ? Number(v.worstDelay.toFixed(1)) : null,
           avgSpeed,
           avgDelay,
           pct: v.total > 0 ? Math.round((v.congested / v.total) * 100) : 0,
@@ -346,7 +424,12 @@ export default function TrafficInsights() {
     // Active hours with recorded data
     const activeHours = hourData.filter(h => h.total > 0);
 
-    // Peak hours ranked by Congested Corridors (Volume across Dhaka)
+    // Peak hours ranked by Congestion Rate (%)
+    const peakHoursByRate = [...activeHours]
+      .sort((a, b) => (b.pct - a.pct) || (b.avgDelay - a.avgDelay))
+      .slice(0, 5);
+
+    // Peak hours ranked by Congested Observations (Volume across Dhaka)
     const peakHoursByVolume = [...activeHours]
       .sort((a, b) => (b.congested - a.congested) || (b.avgDelay - a.avgDelay))
       .slice(0, 5);
@@ -368,6 +451,9 @@ export default function TrafficInsights() {
         route_name: `${r.origin_name} -> ${r.dest_name}`,
         total: 0,
         congested: 0,
+        normal: 0,
+        slow: 0,
+        jam: 0,
       };
     });
 
@@ -382,23 +468,39 @@ export default function TrafficInsights() {
           route_name: m ? m[2] : id,
           total: 0,
           congested: 0,
+          normal: 0,
+          slow: 0,
+          jam: 0,
         };
       }
       routeCounts[id].total++;
       const lvl = (r.traffic_level || r.target_traffic_level || '').toUpperCase();
-      if (lvl === 'SLOW' || lvl === 'MODERATE' || lvl === 'TRAFFIC_JAM' || lvl === 'HEAVY' || lvl === 'SEVERE') {
+      if (lvl === 'TRAFFIC_JAM' || lvl === 'HEAVY' || lvl === 'SEVERE') {
+        routeCounts[id].jam++;
         routeCounts[id].congested++;
+      } else if (lvl === 'SLOW' || lvl === 'MODERATE') {
+        routeCounts[id].slow++;
+        routeCounts[id].congested++;
+      } else {
+        routeCounts[id].normal++;
       }
     });
 
     const routeData = Object.values(routeCounts).map(v => {
       const codeNum = parseInt((v.route_code || '').replace('R', ''), 10) || 999;
+      const total = v.total;
+      const jamPct = total > 0 ? Math.round((v.jam / total) * 100) : 0;
+      const slowPct = total > 0 ? Math.round((v.slow / total) * 100) : 0;
+      const normalPct = total > 0 ? Math.max(0, 100 - jamPct - slowPct) : 0;
       return {
         ...v,
         code_num: codeNum,
         label: v.route_id,
-        value: v.total,
-        pct: v.total > 0 ? Math.round((v.congested / v.total) * 100) : 0,
+        value: total,
+        normalPct,
+        slowPct,
+        jamPct,
+        pct: total > 0 ? Math.round((v.congested / total) * 100) : 0,
       };
     }).sort((a, b) => {
       if (b.value !== a.value) return b.value - a.value; // Most data to least
@@ -422,6 +524,7 @@ export default function TrafficInsights() {
       levelDisplay,
       hourData,
       peakHours,
+      peakHoursByRate,
       peakHoursByVolume,
       peakHoursByDelay,
       routeData,
@@ -645,12 +748,25 @@ export default function TrafficInsights() {
           <div>
             <h3 className="text-sm font-semibold text-slate-800">Top 5 Peak Congestion Hours</h3>
             <p className="text-xs text-slate-400 mt-0.5">
-              {peakSortMode === 'volume'
-                ? 'Ranked by total number of congested road corridors across Dhaka'
-                : 'Ranked by longest traffic delays and severe slowdowns'}
+              {peakSortMode === 'rate'
+                ? 'Ranked by congestion rate (% of snapshots Slow or Jammed)'
+                : peakSortMode === 'volume'
+                ? 'Ranked by total congested snapshots recorded across Dhaka'
+                : 'Ranked by longest average delay and slowdown severity'}
             </p>
           </div>
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
+          <div className="flex flex-wrap items-center gap-1 bg-slate-100 p-1 rounded-xl self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={() => setPeakSortMode('rate')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-lg transition ${
+                peakSortMode === 'rate'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              By Congestion %
+            </button>
             <button
               type="button"
               onClick={() => setPeakSortMode('volume')}
@@ -660,7 +776,7 @@ export default function TrafficInsights() {
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              By Congested Corridors
+              By Volume
             </button>
             <button
               type="button"
@@ -677,12 +793,17 @@ export default function TrafficInsights() {
         </div>
 
         <div className="divide-y divide-slate-100">
-          {(peakSortMode === 'volume' ? stats.peakHoursByVolume : stats.peakHoursByDelay).map((h, i) => {
+          {(peakSortMode === 'rate'
+            ? stats.peakHoursByRate
+            : peakSortMode === 'volume'
+            ? stats.peakHoursByVolume
+            : stats.peakHoursByDelay
+          ).map((h, i) => {
             const isTop = i === 0;
             return (
-              <div key={h.label} className="flex flex-col sm:flex-row sm:items-center justify-between py-3 gap-2">
-                <div className="flex items-center gap-3">
-                  <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+              <div key={h.label} className="flex flex-col lg:flex-row lg:items-center justify-between py-3.5 gap-3">
+                <div className="flex items-start gap-3 min-w-0">
+                  <span className={`w-6 h-6 mt-0.5 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
                     isTop ? 'bg-red-500 text-white shadow-sm' :
                     i === 1 ? 'bg-orange-100 text-orange-700' :
                     i === 2 ? 'bg-amber-100 text-amber-700' :
@@ -690,41 +811,81 @@ export default function TrafficInsights() {
                   }`}>
                     {i + 1}
                   </span>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-bold text-slate-800">{h.label}</span>
-                      <span className="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                  <div className="min-w-0 space-y-1.5">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-sm font-bold text-slate-800">{h.timeWindow}</span>
+                      <span className="text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-full">
                         {h.period}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-                      <span>Avg Speed: <strong className="text-slate-700">{h.avgSpeed} km/h</strong></span>
-                      <span>·</span>
-                      <span>Avg Delay: <strong className="text-slate-700">+{h.avgDelay} min</strong></span>
-                      {h.jams > 0 && (
-                        <>
-                          <span>·</span>
-                          <span className="text-red-600 font-medium">{h.jams} Severe Jam{h.jams > 1 ? 's' : ''}</span>
-                        </>
-                      )}
+
+                    <div className="grid grid-cols-3 gap-2 max-w-md text-[11px]">
+                      <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1">
+                        <span className="text-slate-400">Speed </span>
+                        <strong className="text-slate-800">{h.avgSpeed} km/h</strong>
+                      </div>
+                      <div className="bg-slate-50 border border-slate-100 rounded-lg px-2 py-1">
+                        <span className="text-slate-400">Delay </span>
+                        <strong className="text-slate-800">+{h.avgDelay} min</strong>
+                      </div>
+                      <div className={`rounded-lg px-2 py-1 border ${
+                        h.jams > 0
+                          ? 'bg-rose-50/70 border-rose-100 text-rose-700'
+                          : 'bg-slate-50 border-slate-100 text-slate-500'
+                      }`}>
+                        <span>Jams </span>
+                        <strong>{h.jams}</strong>
+                      </div>
                     </div>
+
+                    {h.worstRoute && (
+                      <div className="text-[11px] text-slate-500 truncate max-w-md" title={`${h.worstRoute} (+${h.worstDelay}m max delay)`}>
+                        <span className="text-slate-400 font-medium">Top Hotspot: </span>
+                        <span className="font-semibold text-slate-700">{h.worstRoute}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 text-xs self-start sm:self-auto pl-9 sm:pl-0">
-                  <span className="text-slate-500 font-medium">
-                    {h.congested} / {h.total} corridors ({h.pct}%)
+                <div className="flex flex-wrap items-center gap-3 text-xs pl-9 lg:pl-0 shrink-0">
+                  {/* Stacked Normal / Slow / Jam mini bar */}
+                  <div className="w-32 sm:w-40">
+                    <div
+                      className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden flex"
+                      title={`Normal: ${h.normalPct}% (${h.normal}) | Slow: ${h.slowPct}% (${h.slow}) | Jam: ${h.jamPct}% (${h.jams})`}
+                    >
+                      {h.normalPct > 0 && <div className="h-full bg-emerald-500" style={{ width: `${h.normalPct}%` }} />}
+                      {h.slowPct > 0 && <div className="h-full bg-amber-400" style={{ width: `${h.slowPct}%` }} />}
+                      {h.jamPct > 0 && <div className="h-full bg-rose-500" style={{ width: `${h.jamPct}%` }} />}
+                    </div>
+                    <div className="flex justify-between text-[10px] text-slate-400 mt-0.5">
+                      <span>{h.normalPct}% Normal</span>
+                      <span>{h.slowPct + h.jamPct}% Congested</span>
+                    </div>
+                  </div>
+
+                  <span className="text-slate-500 font-medium text-right min-w-[115px]">
+                    {h.congested} / {h.total} snapshots
                   </span>
-                  <span className={`font-bold px-2.5 py-1 rounded-lg border ${
+
+                  <span className={`font-bold px-2.5 py-1 rounded-lg border min-w-[110px] text-center ${
                     peakSortMode === 'severity'
-                      ? (h.avgDelay >= 25 ? 'bg-red-50 border-red-200 text-red-600' :
+                      ? (h.avgDelay >= 25 ? 'bg-rose-50 border-rose-200 text-rose-600' :
                          h.avgDelay >= 10 ? 'bg-amber-50 border-amber-200 text-amber-600' :
                          'bg-blue-50 border-blue-200 text-blue-600')
-                      : (h.congested >= 20 ? 'bg-red-50 border-red-200 text-red-600' :
+                      : peakSortMode === 'rate'
+                      ? (h.pct >= 50 ? 'bg-rose-50 border-rose-200 text-rose-600' :
+                         h.pct >= 25 ? 'bg-amber-50 border-amber-200 text-amber-600' :
+                         'bg-emerald-50 border-emerald-200 text-emerald-700')
+                      : (h.congested >= 20 ? 'bg-rose-50 border-rose-200 text-rose-600' :
                          h.congested >= 10 ? 'bg-amber-50 border-amber-200 text-amber-600' :
                          'bg-blue-50 border-blue-200 text-blue-600')
                   }`}>
-                    {peakSortMode === 'severity' ? `+${h.avgDelay} min Delay` : `${h.congested} Corridors Congested`}
+                    {peakSortMode === 'severity'
+                      ? `+${h.avgDelay} min Delay`
+                      : peakSortMode === 'rate'
+                      ? `${h.pct}% Congested`
+                      : `${h.congested} Congested`}
                   </span>
                 </div>
               </div>

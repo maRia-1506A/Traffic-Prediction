@@ -621,6 +621,42 @@ export function getEngineStatusService() {
   };
 }
 
+function hasStraightJump(coords, maxGapKm = 1.2) {
+  if (!Array.isArray(coords) || coords.length < 6) return true;
+  for (let i = 1; i < coords.length; i++) {
+    if (haversineKm(coords[i - 1], coords[i]) > maxGapKm) return true;
+  }
+  return false;
+}
+
+async function fetchOsrmRoadGeometry(waypoints) {
+  if (!Array.isArray(waypoints) || waypoints.length < 2) return null;
+  try {
+    const wpStr = waypoints.map(w => `${Number(w[1])},${Number(w[0])}`).join(';');
+    const url = `https://router.project-osrm.org/route/v1/driving/${wpStr}?overview=full&geometries=geojson`;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 3000);
+    const resp = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!resp.ok) return null;
+    const json = await resp.json();
+    const r = json?.routes?.[0];
+    if (r?.geometry?.coordinates?.length >= 2) {
+      const coords = r.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+      const start = waypoints[0];
+      const end = waypoints[waypoints.length - 1];
+      if (coords[0][0] !== start[0] || coords[0][1] !== start[1]) coords.unshift(start);
+      const last = coords[coords.length - 1];
+      if (last[0] !== end[0] || last[1] !== end[1]) coords.push(end);
+      return {
+        coordinates: coords,
+        distance_km: Number((r.distance / 1000).toFixed(2)),
+      };
+    }
+  } catch (_) {}
+  return null;
+}
+
 // Predict journey endpoint supporting Day/Date, Time, From, To
 // Powered by Google Maps Routes API v2 + OpenWeatherMap API + OSM Network
 export async function predictJourneyService({ date, day, time, from, to }) {
@@ -824,13 +860,46 @@ export async function predictJourneyService({ date, day, time, from, to }) {
 
   // Ensure route geometry, segment names, distance, and travel time all come from the same route
   const useGoogleGeometry = Boolean(googleRouteData?.primary && decodedGooglePrimary.length >= 2);
-  const primaryRoadCoords = useGoogleGeometry
-    ? decodedGooglePrimary
-    : (osmPrimary.coordinates.length >= 2 ? osmPrimary.coordinates : primaryWaypoints);
+  let primaryRoadCoords = useGoogleGeometry
+    ? [...decodedGooglePrimary]
+    : (osmPrimary.coordinates.length >= 2 ? [...osmPrimary.coordinates] : [...primaryWaypoints]);
 
-  const rawPrimarySegments = useGoogleGeometry
-    ? segmentPolylineWithOsmNames(decodedGooglePrimary, `${fTrim} → ${tTrim}`)
+  // If local OSM GeoJSON fell back to a straight line (e.g. outer Dhaka routes like Ashulia/Savar), fetch full street geometry from OSRM
+  let osrmPrimaryData = null;
+  if (!useGoogleGeometry && hasStraightJump(primaryRoadCoords)) {
+    osrmPrimaryData = await fetchOsrmRoadGeometry([origCoords, destCoords]);
+    if (osrmPrimaryData?.coordinates?.length >= 2) {
+      primaryRoadCoords = osrmPrimaryData.coordinates;
+    }
+  }
+
+  // Guarantee line starts exactly at origCoords and ends exactly at destCoords
+  if (primaryRoadCoords.length >= 2) {
+    if (primaryRoadCoords[0][0] !== origCoords[0] || primaryRoadCoords[0][1] !== origCoords[1]) {
+      primaryRoadCoords.unshift(origCoords);
+    }
+    const lastIdx = primaryRoadCoords.length - 1;
+    if (primaryRoadCoords[lastIdx][0] !== destCoords[0] || primaryRoadCoords[lastIdx][1] !== destCoords[1]) {
+      primaryRoadCoords.push(destCoords);
+    }
+  }
+
+  const rawPrimarySegments = (useGoogleGeometry || osrmPrimaryData)
+    ? segmentPolylineWithOsmNames(primaryRoadCoords, `${fTrim} → ${tTrim}`)
     : osmPrimary.segments;
+
+  if (rawPrimarySegments.length > 0) {
+    if (rawPrimarySegments[0].coordinates && (rawPrimarySegments[0].coordinates[0][0] !== origCoords[0] || rawPrimarySegments[0].coordinates[0][1] !== origCoords[1])) {
+      rawPrimarySegments[0].coordinates.unshift(origCoords);
+    }
+    const lastSeg = rawPrimarySegments[rawPrimarySegments.length - 1];
+    if (lastSeg.coordinates) {
+      const lastCoord = lastSeg.coordinates[lastSeg.coordinates.length - 1];
+      if (lastCoord[0] !== destCoords[0] || lastCoord[1] !== destCoords[1]) {
+        lastSeg.coordinates.push(destCoords);
+      }
+    }
+  }
 
   // Enrich individual segments ONLY where verified historical telemetry exists in traffic_data.csv for that exact osm_id
   const historyRows = loadTrafficData();
@@ -1102,6 +1171,22 @@ export async function predictJourneyService({ date, day, time, from, to }) {
     });
   }
 
+  // Refine any alternative route that still has straight-line jumps outside local OSM GeoJSON bounds
+  await Promise.all(
+    alternativeRoutes.map(async (alt) => {
+      if (hasStraightJump(alt.road_coords)) {
+        const wps = alt.coords ? [origCoords, alt.coords, destCoords] : [origCoords, destCoords];
+        const osrmAlt = await fetchOsrmRoadGeometry(wps);
+        if (osrmAlt?.coordinates?.length >= 2) {
+          alt.road_coords = osrmAlt.coordinates;
+          if (osrmAlt.distance_km > 0) {
+            alt.distance_km = Number(osrmAlt.distance_km.toFixed(1));
+          }
+        }
+      }
+    })
+  );
+
   const bestAlt = alternativeRoutes[0] || null;
 
   // Google Maps Navigation URL for Primary Route
@@ -1185,10 +1270,27 @@ export function getMonitoredCorridorsOsmOverlay() {
     return {
       route_code: r.route_code,
       route_id: r.route_id,
+      route_path: r.route_path,
+      origin_name: r.origin_name,
+      dest_name: r.dest_name,
+      origin_coords: r.origin_coords,
+      dest_coords: r.dest_coords,
       traffic_level: level,
       raw_level: raw,
       speed_kmh: r.traffic_speed_kmh,
       delay_min: r.traffic_delay_min,
+      travel_time_min: r.travel_time_min,
+      free_flow_time_min: r.free_flow_time_min,
+      road_length_km: r.road_length_km,
+      road_type: r.road_type,
+      num_lanes: r.num_lanes,
+      congestion_ratio: r.congestion_ratio,
+      weather: r.weather,
+      temperature_c: r.temperature_c,
+      rainfall_mm: r.rainfall_mm,
+      volume_veh_hr: r.volume_veh_hr,
+      occupancy_pct: r.occupancy_pct,
+      is_official: r.is_official,
       last_updated: r.last_updated || 'CSV Telemetry',
       coordinates: corridorGeometryCache[r.route_code] || (r.waypoints || []).map(w => w.coords),
     };

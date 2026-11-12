@@ -269,7 +269,7 @@ export function buildOsmRouteGeometry(waypointCoords, routeLabel = 'Primary Corr
 
     if (hop && hop.length >= 2) {
       // Connect exact requested start point if slightly offset from nearest OSM node
-      if (i === 0 && approxKm(c1, hop[0].pt) > 0.03) {
+      if (i === 0 && approxKm(c1, hop[0].pt) > 0.0001) {
         allEdgeSteps.push({
           fromPt: c1,
           toPt: hop[0].pt,
@@ -291,7 +291,7 @@ export function buildOsmRouteGeometry(waypointCoords, routeLabel = 'Primary Corr
         });
       }
 
-      if (i === waypointCoords.length - 2 && approxKm(hop[hop.length - 1].pt, c2) > 0.03) {
+      if (i === waypointCoords.length - 2 && approxKm(hop[hop.length - 1].pt, c2) > 0.0001) {
         allEdgeSteps.push({
           fromPt: hop[hop.length - 1].pt,
           toPt: c2,
@@ -339,6 +339,25 @@ export function buildOsmRouteGeometry(waypointCoords, routeLabel = 'Primary Corr
       if (sIdx === 0 || pIdx > 0) coordinates.push(pt);
     });
   });
+
+  // Guarantee exact connection to origin and destination waypoints
+  if (waypointCoords.length >= 2) {
+    const startWp = waypointCoords[0];
+    const endWp = waypointCoords[waypointCoords.length - 1];
+    if (coordinates.length >= 1 && (coordinates[0][0] !== startWp[0] || coordinates[0][1] !== startWp[1])) {
+      coordinates.unshift(startWp);
+      if (segments.length > 0 && segments[0].coordinates) {
+        segments[0].coordinates.unshift(startWp);
+      }
+    }
+    const lastCoord = coordinates[coordinates.length - 1];
+    if (coordinates.length >= 1 && (lastCoord[0] !== endWp[0] || lastCoord[1] !== endWp[1])) {
+      coordinates.push(endWp);
+      if (segments.length > 0 && segments[segments.length - 1].coordinates) {
+        segments[segments.length - 1].coordinates.push(endWp);
+      }
+    }
+  }
 
   return { coordinates, segments };
 }

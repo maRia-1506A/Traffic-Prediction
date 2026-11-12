@@ -26,9 +26,28 @@ select option {
   font-family: inherit;
 }
 
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.85) !important;
+  color: #334155 !important;
+  padding: 2px 6px !important;
+  border-radius: 6px 0 0 0;
+}
+
 /* Eye-soothing muted base map tiles so traffic roads & pins stand out cleanly */
 .clean-traffic-map .leaflet-tile-pane {
   filter: saturate(0.55) contrast(0.93) brightness(1.04);
+}
+
+/* Crisp dark-mode street map for Dark Canvas basemap */
+.dark-canvas-map .leaflet-container {
+  background: #0f172a !important;
+}
+.dark-canvas-map .leaflet-tile-pane {
+  filter: invert(100%) hue-rotate(180deg) brightness(0.92) contrast(0.96) saturate(0.45);
+}
+
+.measuring-mode .leaflet-container {
+  cursor: crosshair !important;
 }
 
 .leaflet-popup-content-wrapper {
@@ -81,4 +100,26 @@ select option {
 }
 .leaflet-tooltip.map-hotspot-pill::before {
   display: none;
+}
+
+/* Real-time traffic flow stroke animations */
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+.traffic-flow-animated path {
+  stroke-dasharray: 8, 14;
+  animation: flowDash 1.4s linear infinite;
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(0.85); opacity: 0.9; }
+  50% { transform: scale(1.4); opacity: 0.15; }
+  100% { transform: scale(0.85); opacity: 0.9; }
+}
+
+.bottleneck-pulse-node {
+  animation: pulseRing 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

@@ -16,7 +16,8 @@ import {
   getGeoJsonRoadSummary,
   getMonitoredCorridorsOsmOverlay
 } from './trafficService.js';
-import { NODE_COORDINATES, DHAKA_BYPASS_WAYPOINTS } from './routesConfig.js';
+import { NODE_COORDINATES, DHAKA_BYPASS_WAYPOINTS, haversineKm } from './routesConfig.js';
+import { buildOsmRouteGeometry } from './osmRouter.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -279,6 +280,107 @@ app.post('/api/predict-journey', async (req, res) => {
   }
 });
 
+// 7b2. Exact Road Distance & Driving Time Measurement Tool (A to B)
+app.post('/api/measure-route', async (req, res) => {
+  try {
+    const { origin, destination } = req.body || {};
+    if (!origin || !destination || origin.length < 2 || destination.length < 2) {
+      return res.status(400).json({ success: false, error: 'origin and destination [lat, lon] coordinates are required' });
+    }
+
+    const origCoords = [Number(origin[0]), Number(origin[1])];
+    const destCoords = [Number(destination[0]), Number(destination[1])];
+    const directDistKm = haversineKm(origCoords, destCoords);
+
+    let roadCoords = null;
+    let roadDistKm = 0;
+    let osrmDurationMin = null;
+    let roadNames = [];
+    let routingEngine = 'OSM A*';
+
+    // 1. Try OSRM full street-level routing (includes residential lanes, bridges, roundabouts)
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${origCoords[1]},${origCoords[0]};${destCoords[1]},${destCoords[0]}?overview=full&geometries=geojson&steps=true`;
+      const osrmRes = await fetch(osrmUrl, { signal: controller.signal });
+      clearTimeout(timeout);
+
+      if (osrmRes.ok) {
+        const osrmJson = await osrmRes.json();
+        if (osrmJson && osrmJson.routes && osrmJson.routes[0]) {
+          const r = osrmJson.routes[0];
+          const pts = r.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+          if (pts.length >= 2) {
+            roadCoords = [origCoords, ...pts, destCoords];
+            roadDistKm = Number((r.distance / 1000).toFixed(2));
+            osrmDurationMin = r.duration / 60;
+            if (r.legs && r.legs[0] && Array.isArray(r.legs[0].steps)) {
+              roadNames = [...new Set(r.legs[0].steps.map(s => (s.name || '').trim()).filter(Boolean))];
+            }
+            routingEngine = 'OSRM Full Street Network';
+          }
+        }
+      }
+    } catch (e) {
+      // Fallback to local GeoJSON graph
+    }
+
+    // 2. Fallback to local Dhaka OSM arterial graph if OSRM unavailable
+    if (!roadCoords) {
+      const osmRoute = buildOsmRouteGeometry([origCoords, destCoords]);
+      roadCoords = osmRoute.coordinates && osmRoute.coordinates.length >= 2
+        ? [origCoords, ...osmRoute.coordinates, destCoords]
+        : [origCoords, destCoords];
+
+      if (osmRoute.segments && osmRoute.segments.length > 0) {
+        roadDistKm = osmRoute.segments.reduce((acc, s) => acc + (s.distance_km || 0), 0);
+      } else {
+        for (let i = 1; i < roadCoords.length; i++) {
+          roadDistKm += haversineKm(roadCoords[i - 1], roadCoords[i]);
+        }
+      }
+
+      if (roadDistKm < directDistKm * 1.05) {
+        roadDistKm = directDistKm * 1.32;
+      }
+
+      roadNames = osmRoute.segments
+        ? [...new Set(osmRoute.segments.map(s => s.name).filter(n => n && !n.includes('Road Segment') && !n.includes('Primary Corridor')))]
+        : [];
+    }
+
+    // Realistic Dhaka traffic velocity calibration
+    const stats = getDashboardStats();
+    const rawCitySpeed = (stats && stats.avgSpeedKmh) ? Number(stats.avgSpeedKmh) : 22.0;
+    const effectiveSpeed = Math.min(34, Math.max(14, rawCitySpeed > 36 ? 24.5 : rawCitySpeed));
+
+    const freeFlowMin = osrmDurationMin
+      ? Math.max(1, Math.round(osrmDurationMin))
+      : Math.max(1, Math.round((roadDistKm / 38) * 60));
+
+    const estTimeMin = Math.max(freeFlowMin, Math.round((roadDistKm / effectiveSpeed) * 60));
+    const delayMin = Math.max(0, estTimeMin - freeFlowMin);
+
+    res.json({
+      success: true,
+      data: {
+        road_distance_km: Number(roadDistKm.toFixed(2)),
+        direct_distance_km: Number(directDistKm.toFixed(2)),
+        coordinates: roadCoords,
+        est_travel_time_min: estTimeMin,
+        free_flow_time_min: freeFlowMin,
+        delay_min: delayMin,
+        city_speed_kmh: Number(effectiveSpeed.toFixed(1)),
+        roads: roadNames.slice(0, 4),
+        engine: routingEngine
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
 // 7c. Live Weather from OpenWeatherMap API
 app.get('/api/weather', async (req, res) => {
   try {
@@ -354,6 +456,22 @@ app.get('/api/server-info', (req, res) => {
       concurrent_runners: 'Dual server & client runner enabled via npm run dev'
     }
   });
+});
+
+// Serve logo and favicon requests
+app.get(['/favicon.ico', '/favicon.svg'], (req, res) => {
+  const iconPath = path.resolve(__dirname, '../frontend/public/logo/logo.svg');
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(iconPath);
+});
+
+// Serve logo and favicon requests
+app.get(['/favicon.ico', '/favicon.svg'], (req, res) => {
+  const iconPath = path.resolve(__dirname, '../frontend/public/logo/logo.svg');
+  res.setHeader('Content-Type', 'image/svg+xml');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(iconPath);
 });
 
 // Serve frontend build if dist folder exists
