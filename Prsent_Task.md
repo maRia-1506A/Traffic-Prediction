@@ -1,5 +1,5 @@
-Google Maps + Waze API Integration - @Fathum
+Data Collection  - @Fathum
 
-Frontend - @Rohan 
+Database SQ Lite - @Rohan 
 
-Database & API - @Maria 
+Frontend- @Maria 
