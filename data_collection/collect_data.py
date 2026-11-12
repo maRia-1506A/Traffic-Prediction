@@ -1132,7 +1132,7 @@ def collect_current_snapshot(source: str = "corridors", limit: int = 50):
     now = datetime.datetime.now()
     timestamp_str = now.strftime("%Y-%m-%d %H:%M")
     day_name = now.strftime("%A")
-    hour_val = now.hour
+    hour_val = 24 if now.hour == 0 else now.hour
     minute_val = now.minute
     is_weekend = "Yes" if now.weekday() in [4, 5] else "No"
 

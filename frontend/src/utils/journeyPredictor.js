@@ -5,7 +5,10 @@ import {
   ALL_DHAKA_LOCATIONS,
   NODE_COORDINATES,
   OFFICIAL_ROUTES,
-  DHAKA_BYPASS_WAYPOINTS
+  ALL_ROUTES,
+  DHAKA_BYPASS_WAYPOINTS,
+  HOURLY_HISTORICAL_PROFILE,
+  CORRIDOR_HISTORICAL_STATS
 } from './dhakaRoutesData.js';
 
 export function haversineKm(c1, c2) {
@@ -65,8 +68,42 @@ export function findRouteBetween(from, to) {
     };
   }
 
-  // 1. Check if directly present in any official corridor with intermediate waypoints
-  for (const r of OFFICIAL_ROUTES) {
+  // 1. Priority 1: Check for exact endpoint corridor match across corridors
+  const candidateRoutes = ALL_ROUTES && ALL_ROUTES.length > 0 ? ALL_ROUTES : OFFICIAL_ROUTES;
+
+  for (const r of candidateRoutes) {
+    const parts = r.route_path.split('->').map(p => p.trim());
+    const isDirect = (parts[0].toLowerCase() === fTrim.toLowerCase() && parts[parts.length - 1].toLowerCase() === tTrim.toLowerCase());
+    const isReverse = (parts[parts.length - 1].toLowerCase() === fTrim.toLowerCase() && parts[0].toLowerCase() === tTrim.toLowerCase());
+
+    if (isDirect || isReverse) {
+      const sub = isDirect ? parts : [...parts].reverse();
+      const origCoords = NODE_COORDINATES[fTrim] || r.origin_coords;
+      const destCoords = NODE_COORDINATES[tTrim] || r.dest_coords;
+      const directDist = haversineKm(origCoords, destCoords);
+      const distKm = r.road_length_km || Math.max(1.5, Number((directDist * 1.32).toFixed(1)));
+      const freeFlowSpeed = (r.route_path || '').toLowerCase().includes('expressway') ? 50.0 : 35.0;
+      const freeFlowMin = r.free_flow_time_min || Math.max(2.5, Number(((distKm / freeFlowSpeed) * 60.0).toFixed(1)));
+      const checkpoints = sub.slice(1, -1).map(name => ({
+        name,
+        coords: NODE_COORDINATES[name] || null
+      })).filter(c => c.coords);
+
+      return {
+        route_code: r.route_code,
+        name: `${fTrim} to ${tTrim}`,
+        path: sub.join(' -> '),
+        steps: sub,
+        checkpoints,
+        distance_km: distKm,
+        free_flow_time_min: freeFlowMin,
+        matchedCorridor: r.route_id
+      };
+    }
+  }
+
+  // 2. Priority 2: Check if sub-path present in any corridor
+  for (const r of candidateRoutes) {
     const parts = r.route_path.split('->').map(p => p.trim());
     const fIdx = parts.findIndex(p => p.toLowerCase() === fTrim.toLowerCase());
     const tIdx = parts.findIndex(p => p.toLowerCase() === tTrim.toLowerCase());
@@ -82,18 +119,12 @@ export function findRouteBetween(from, to) {
         coords: NODE_COORDINATES[name] || null
       })).filter(c => c.coords);
 
-      // Estimate distance based on proportion or coordinates
       const origCoords = NODE_COORDINATES[fTrim] || r.origin_coords;
       const destCoords = NODE_COORDINATES[tTrim] || r.dest_coords;
       const directDist = haversineKm(origCoords, destCoords);
-      const distKm = Math.max(
-        1.5,
-        Number((directDist * 1.32).toFixed(1))
-      );
-      const freeFlowMin = Math.max(
-        3.0,
-        Number(((distKm / 35.0) * 60.0).toFixed(1))
-      );
+      const distKm = Math.max(1.5, Number((directDist * 1.32).toFixed(1)));
+      const freeFlowSpeed = (r.route_path || '').toLowerCase().includes('expressway') ? 50.0 : 35.0;
+      const freeFlowMin = Math.max(2.5, Number(((distKm / freeFlowSpeed) * 60.0).toFixed(1)));
 
       return {
         route_code: r.route_code,
@@ -301,106 +332,77 @@ export function predictJourneyTraffic({
   const minute = parseInt(mStr || '0', 10);
   const floatHour = hour + minute / 60.0;
 
-  // 3. Traffic Congestion Factor based on Dhaka commuter traffic patterns
-  let rushFactor = 1.0;
-  let periodLabel = 'Off-Peak Hours';
+  // 3. Find primary route
+  const routeMatch = findRouteBetween(from, to);
+  const targetHour = floatHour === 0 ? 24.0 : floatHour;
+  const roundedHour = Math.min(24, Math.max(1, Math.round(targetHour)));
 
+  // 4. Data-driven statistical traffic model from historical dataset
+  const hourlyProfile = HOURLY_HISTORICAL_PROFILE[String(roundedHour)] || { speed: 26.5, delay: 4.5, ratio: 1.18 };
+  const corridorStats = CORRIDOR_HISTORICAL_STATS[routeMatch.route_code];
+
+  // Dynamic Period Label based on Dhaka commuting reality
+  let periodLabel = 'Off-Peak Hours';
   if (!isWeekend) {
-    // Weekdays (Sunday to Thursday in Bangladesh)
-    if (floatHour >= 7.75 && floatHour <= 10.75) {
-      rushFactor = 2.65;
+    if (floatHour >= 7.5 && floatHour <= 10.5) {
       periodLabel = 'Morning Peak Rush (Commute to Work / Schools)';
-    } else if (floatHour >= 16.5 && floatHour <= 21.0) {
-      rushFactor = 2.85;
+    } else if (floatHour >= 16.5 && floatHour <= 20.5) {
       periodLabel = 'Evening Peak Rush (Commute Return / Commercial Gridlock)';
-    } else if (floatHour >= 11.0 && floatHour <= 16.25) {
-      rushFactor = 1.48;
-      periodLabel = 'Midday Flow (School Dispersal & Active Commerce)';
-    } else if (floatHour >= 21.0 && floatHour <= 23.0) {
-      rushFactor = 1.25;
+    } else if (floatHour >= 10.5 && floatHour <= 16.5) {
+      periodLabel = 'Midday Flow (Active Commerce & School Dispersal)';
+    } else if (floatHour >= 20.5 && floatHour <= 23.0) {
       periodLabel = 'Late Evening (Commercial Dispersal & Truck Entry)';
     } else {
-      rushFactor = 1.0;
       periodLabel = 'Night / Early Morning Free Flow';
     }
   } else if (isFriday) {
-    // Friday (Official Bangladesh Holiday)
     if (floatHour >= 16.0 && floatHour <= 21.5) {
-      rushFactor = 1.42;
       periodLabel = 'Friday Evening Outing & Shopping Traffic';
     } else {
-      rushFactor = 1.02;
       periodLabel = 'Friday Holiday Free Flow';
     }
   } else if (isSaturday) {
-    // Saturday (Partial work/university day)
-    if (floatHour >= 9.0 && floatHour <= 11.5) {
-      rushFactor = 1.7;
+    if (floatHour >= 9.0 && floatHour <= 12.0) {
       periodLabel = 'Saturday Morning Flow';
-    } else if (floatHour >= 17.0 && floatHour <= 20.5) {
-      rushFactor = 1.85;
+    } else if (floatHour >= 16.5 && floatHour <= 21.0) {
       periodLabel = 'Saturday Evening Outing';
     } else {
-      rushFactor = 1.1;
       periodLabel = 'Saturday Regular Flow';
     }
   }
 
-  // 4. Find primary route
-  const routeMatch = findRouteBetween(from, to);
+  // Calculate speed and travel time grounded in historical records
+  const distKm = routeMatch.distance_km;
+  const freeFlowSpeed = (routeMatch.matchedCorridor || '').toLowerCase().includes('expressway') ? 50.0 : 35.0;
+  const freeFlowMin = routeMatch.free_flow_time_min || Math.max(2.5, Number(((distKm / freeFlowSpeed) * 60.0).toFixed(1)));
 
-  // Check if route passes through notoriously severe choke points
-  let bottleneckAddon = 1.0;
-  const pathStr = routeMatch.path || '';
-  if (
-    pathStr.includes('Farmgate') ||
-    pathStr.includes('Mirpur 10') ||
-    pathStr.includes('Mohakhali') ||
-    pathStr.includes('Kazipara') ||
-    pathStr.includes('Rokeya Sarani')
-  ) {
-    bottleneckAddon = 1.15;
-  } else if (
-    pathStr.includes('Jatrabari') ||
-    pathStr.includes('Gulistan') ||
-    pathStr.includes('Kuril') ||
-    pathStr.includes('Airport')
-  ) {
-    bottleneckAddon = 1.1;
+  let baselineSpeed = hourlyProfile.speed;
+  if (corridorStats && corridorStats.count > 0) {
+    const hourlySpeedFactor = hourlyProfile.speed / 26.5;
+    baselineSpeed = Math.min(
+      corridorStats.max_speed,
+      Math.max(corridorStats.min_speed, corridorStats.avg_speed * hourlySpeedFactor)
+    );
   }
 
-  const totalMultiplier = rushFactor * bottleneckAddon;
-  const freeFlowMin = routeMatch.free_flow_time_min;
-  const distKm = routeMatch.distance_km;
-
-  const travelTimeMin = Number((freeFlowMin * totalMultiplier).toFixed(1));
-  const delayMin = Math.max(0, Number((travelTimeMin - freeFlowMin).toFixed(1)));
-  const speedKmh = Math.max(
-    5.0,
-    Number((distKm / Math.max(travelTimeMin / 60.0, 0.05)).toFixed(1))
-  );
+  const travelTimeMin = Number(Math.max(freeFlowMin, (distKm / Math.max(baselineSpeed, 5.0)) * 60.0).toFixed(1));
+  const delayMin = Number(Math.max(0, travelTimeMin - freeFlowMin).toFixed(1));
+  const speedKmh = Number(Math.max(5.0, distKm / Math.max(travelTimeMin / 60.0, 0.05)).toFixed(1));
   const congestionRatio = Number((travelTimeMin / freeFlowMin).toFixed(2));
 
-  // 5. Traffic Prediction Level: "High", "Medium", "Low"
+  // 5. Traffic Prediction Level: "High", "Medium", "Low" calibrated to empirical dataset
   let trafficPrediction = 'Low';
   let badgeColor = 'emerald';
-  let levelDescription = 'Smooth traffic with free flowing speeds and minimal waiting.';
+  let levelDescription = 'Roads are flowing freely with minimal stops. Good time to travel.';
 
-  if (totalMultiplier >= 2.1 || congestionRatio >= 2.0 || delayMin >= 15.0 || speedKmh < 14.0) {
+  if (congestionRatio >= 1.85 || (speedKmh < 15.0 && delayMin >= 12.0)) {
     trafficPrediction = 'High';
     badgeColor = 'rose';
-    levelDescription =
-      'Heavy congestion and severe delays detected on this route. Expect stop-and-go jams.';
-  } else if (totalMultiplier >= 1.35 || congestionRatio >= 1.3 || delayMin >= 4.0 || speedKmh < 24.0) {
+    levelDescription = 'Severe congestion and long queue delays expected on this route. Allow extra time.';
+  } else if (congestionRatio >= 1.35 || (speedKmh < 23.0 && delayMin >= 5.0)) {
     trafficPrediction = 'Medium';
     badgeColor = 'amber';
-    levelDescription =
-      'Moderate traffic density. Vehicles moving steadily with periodic intersection queues.';
-  } else {
-    trafficPrediction = 'Low';
-    badgeColor = 'emerald';
-    levelDescription =
-      'Free flow traffic with minimal transit delays and normal cruising speeds.';
+    levelDescription = 'Moderate traffic density with steady speed and periodic intersection queues.';
   }
 
   const origCoords = NODE_COORDINATES[from] || [23.8103, 90.4125];

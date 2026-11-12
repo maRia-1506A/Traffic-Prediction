@@ -414,33 +414,37 @@ export default function TrafficJourneyPredictor() {
                       ref={hourInputRef}
                       type="text"
                       inputMode="numeric"
-                      maxLength={2}
+                      maxLength={3}
                       autoFocus
                       aria-label="Hour"
                       value={pickerHour}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
-                        if (digits === '') {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        if (raw === '') {
                           setPickerHour('');
                           return;
                         }
-                        if (digits === '00') return;
-                        if (digits.length === 2) {
-                          const num = parseInt(digits, 10);
-                          if (num < 1 || num > 12) return;
-                          setPickerHour(digits);
-                          minuteInputRef.current?.focus();
-                          minuteInputRef.current?.select();
-                          return;
+                        let digits = raw;
+                        if (digits.length > 2) {
+                          digits = digits.slice(-2);
+                        }
+                        const num = parseInt(digits, 10);
+                        if (digits.length === 2 && (num < 1 || num > 12)) {
+                          const latest = parseInt(digits[1], 10);
+                          digits = latest >= 1 ? String(latest) : '12';
                         }
                         setPickerHour(digits);
                       }}
-                      onBlur={() => setPickerHour(clampHour(pickerHour))}
+                      onBlur={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setPickerHour(clampHour(val));
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === 'ArrowUp') {
                           e.preventDefault();
-                          const next = ((parseInt(pickerHour, 10) || 12) % 12) + 1;
+                          const cur = parseInt(pickerHour, 10) || 12;
+                          const next = (cur % 12) + 1;
                           setPickerHour(String(next).padStart(2, '0'));
                         } else if (e.key === 'ArrowDown') {
                           e.preventDefault();
@@ -463,26 +467,31 @@ export default function TrafficJourneyPredictor() {
                       ref={minuteInputRef}
                       type="text"
                       inputMode="numeric"
-                      maxLength={2}
+                      maxLength={3}
                       aria-label="Minute"
                       value={pickerMinute}
                       onFocus={(e) => e.target.select()}
                       onChange={(e) => {
-                        const digits = e.target.value.replace(/\D/g, '').slice(0, 2);
-                        if (digits === '') {
+                        const raw = e.target.value.replace(/\D/g, '');
+                        if (raw === '') {
                           setPickerMinute('');
                           return;
                         }
-                        if (digits.length === 1) {
-                          const num = parseInt(digits, 10);
-                          setPickerMinute(num > 5 ? `0${digits}` : digits);
-                          return;
+                        let digits = raw;
+                        if (digits.length > 2) {
+                          digits = digits.slice(-2);
                         }
                         const num = parseInt(digits, 10);
-                        if (num < 0 || num > 59) return;
+                        if (num > 59) {
+                          const latest = parseInt(digits[1], 10);
+                          digits = String(latest);
+                        }
                         setPickerMinute(digits);
                       }}
-                      onBlur={() => setPickerMinute(clampMinute(pickerMinute))}
+                      onBlur={(e) => {
+                        const val = e.target.value.replace(/\D/g, '');
+                        setPickerMinute(clampMinute(val));
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === 'ArrowUp') {
                           e.preventDefault();

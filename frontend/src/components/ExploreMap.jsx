@@ -28,38 +28,69 @@ export default function ExploreMap() {
   const [waypoints, setWaypoints] = useState([]);
   const [loading, setLoading]     = useState(true);
   const [error, setError]         = useState(null);
+  const [isOffline, setIsOffline] = useState(false);
+  const [scope, setScope]         = useState('50_OFFICIAL');
   const [filter, setFilter]       = useState('ALL');
   const [selected, setSelected]   = useState(null);
 
+  const loadData = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [rRes, wRes] = await Promise.all([fetchRoutes(), fetchWaypoints()]);
+      if (rRes && rRes.success) {
+        setRoutes(rRes.data || []);
+        setIsOffline(Boolean(rRes.isOffline));
+      }
+      if (wRes && wRes.success) {
+        setWaypoints(wRes.waypoints || []);
+      }
+    } catch (e) {
+      console.warn('Map data load error:', e);
+      setError('Could not load route data. Make sure the backend server is running.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Fetch data
   useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const [rRes, wRes] = await Promise.all([fetchRoutes(), fetchWaypoints()]);
-        if (rRes.success) setRoutes(rRes.data || []);
-        if (wRes.success) setWaypoints(wRes.waypoints || []);
-      } catch (e) {
-        setError('Could not load route data. Make sure the backend server is running.');
-      } finally {
-        setLoading(false);
-      }
-    })();
+    loadData();
   }, []);
 
   // Init map
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, {
-      center: [23.8103, 90.4125], zoom: 12, zoomControl: true,
+      center: [23.8103, 90.4125],
+      zoom: 12,
+      zoomControl: true,
     });
+
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     }).addTo(map);
+
     layerRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
-    return () => { map.remove(); mapRef.current = null; };
+
+    const timer = setTimeout(() => {
+      map.invalidateSize();
+    }, 150);
+
+    const onResize = () => {
+      map.invalidateSize();
+    };
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      window.removeEventListener('resize', onResize);
+      clearTimeout(timer);
+      map.remove();
+      mapRef.current = null;
+      layerRef.current = null;
+    };
   }, []);
 
   // Render routes on map
@@ -67,9 +98,13 @@ export default function ExploreMap() {
     const map = mapRef.current;
     const lg  = layerRef.current;
     if (!map || !lg) return;
+
+    map.invalidateSize();
     lg.clearLayers();
 
     const filtered = routes.filter(r => {
+      const codeNum = parseInt((r.route_code || '').replace('R', ''), 10);
+      if (scope === '50_OFFICIAL' && !isNaN(codeNum) && codeNum > 50) return false;
       if (filter === 'ALL') return true;
       return (r.traffic_level || '').toUpperCase() === filter;
     });
@@ -120,45 +155,93 @@ export default function ExploreMap() {
         radius: 4, fillColor: '#3b82f6', color: '#fff', weight: 1, fillOpacity: 0.7,
       }).bindTooltip(wp.name, { direction: 'top' }).addTo(lg);
     });
-  }, [routes, waypoints, filter, selected]);
+  }, [routes, waypoints, filter, scope, selected]);
 
   const resetView = () => {
-    if (mapRef.current) mapRef.current.setView([23.8103, 90.4125], 12);
+    if (mapRef.current) {
+      mapRef.current.setView([23.8103, 90.4125], 12);
+      mapRef.current.invalidateSize();
+    }
     setSelected(null);
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-20">
-        <div className="w-6 h-6 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
-        <p className="text-sm text-slate-500 mt-3">Loading map data...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-5 text-sm text-red-700">
-        {error}
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-5">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-800">Explore Map</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Browse {routes.length} corridors and {waypoints.length} locations across Dhaka.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-800">Explore Map</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Browse {routes.length} corridors and {waypoints.length} strategic locations across Dhaka.
+          </p>
+        </div>
+
+        {isOffline ? (
+          <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 px-3 py-1 rounded-full font-medium self-start sm:self-auto">
+            <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+            Standalone Mode (Backend offline)
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-full font-medium self-start sm:self-auto">
+            <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+            Live API Backend (Port 5000)
+          </span>
+        )}
       </div>
 
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-xs text-red-700 flex items-center justify-between gap-3">
+          <span>{error}</span>
+          <button
+            onClick={loadData}
+            className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-medium rounded-md transition"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
+      {isOffline && (
+        <div className="bg-amber-50/90 border border-amber-200 rounded-xl p-3.5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-amber-800 shadow-sm">
+          <div className="flex items-center gap-2">
+            <span className="text-base">⚡</span>
+            <span>
+              <strong>Running in Standalone Mode:</strong> Displaying 50 precomputed Dhaka corridors. For live Google Maps telemetry and real-time sensor updates, start both backend and frontend together with <code className="bg-amber-100/90 text-amber-900 px-1.5 py-0.5 rounded font-mono font-semibold">npm run dev</code>.
+            </span>
+          </div>
+          <button
+            onClick={loadData}
+            className="shrink-0 px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-medium rounded-lg transition"
+          >
+            Reconnect
+          </button>
+        </div>
+      )}
+
       {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs font-medium text-slate-500">Filter:</span>
+      <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+          <button
+            onClick={() => setScope('50_OFFICIAL')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+              scope === '50_OFFICIAL' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            Official 50 Corridors
+          </button>
+          <button
+            onClick={() => setScope('ALL_ROUTES')}
+            className={`px-2.5 py-1 text-xs font-semibold rounded-md transition ${
+              scope === 'ALL_ROUTES' ? 'bg-white text-blue-700 shadow-xs' : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            All Corridors ({routes.length})
+          </button>
+        </div>
+
+        <span className="text-xs font-medium text-slate-400 ml-1">Traffic:</span>
         {['ALL', 'NORMAL', 'MODERATE', 'HEAVY', 'SEVERE'].map(lvl => (
           <button key={lvl} onClick={() => setFilter(lvl)}
-            className={`px-3 py-1.5 text-xs font-medium rounded-lg border transition ${
+            className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition ${
               filter === lvl
                 ? 'bg-blue-600 text-white border-blue-600'
                 : 'border-slate-200 text-slate-600 hover:border-blue-300 hover:text-blue-600'
@@ -173,8 +256,14 @@ export default function ExploreMap() {
       </div>
 
       {/* Map */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div ref={containerRef} className="w-full h-[500px] sm:h-[580px]" />
+      <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {loading && (
+          <div className="absolute inset-0 z-[1000] bg-white/75 backdrop-blur-[1px] flex flex-col items-center justify-center">
+            <div className="w-8 h-8 border-3 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <p className="text-xs font-semibold text-slate-600 mt-2.5">Rendering Dhaka road network...</p>
+          </div>
+        )}
+        <div ref={containerRef} className="w-full h-[500px] sm:h-[580px] z-0" />
       </div>
 
       {/* Selected route detail strip */}
