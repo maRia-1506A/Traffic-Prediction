@@ -1,6 +1,5 @@
 import express from 'express';
 import cors from 'cors';
-import compression from 'compression';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -19,6 +18,15 @@ import {
 import { NODE_COORDINATES, DHAKA_BYPASS_WAYPOINTS, haversineKm } from './routesConfig.js';
 import { buildOsmRouteGeometry } from './osmRouter.js';
 
+// Resilient compression import (safe if module not present)
+let compression = null;
+try {
+  const mod = await import('compression');
+  compression = mod.default || mod;
+} catch {
+  console.warn('[Server] Optional compression module not loaded; proceeding without compression.');
+}
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -29,14 +37,16 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const SERVER_START_TIME = Date.now();
 
-// High-performance gzip/brotli compression middleware
-app.use(compression({
-  threshold: 1024, // Compress responses above 1 KB
-  filter: (req, res) => {
-    if (req.headers['x-no-compression']) return false;
-    return compression.filter(req, res);
-  }
-}));
+// High-performance gzip/brotli compression middleware (if available)
+if (compression) {
+  app.use(compression({
+    threshold: 1024, // Compress responses above 1 KB
+    filter: (req, res) => {
+      if (req.headers['x-no-compression']) return false;
+      return compression.filter(req, res);
+    }
+  }));
+}
 
 app.use(cors());
 app.use(express.json({ limit: '1mb' }));
@@ -456,14 +466,6 @@ app.get('/api/server-info', (req, res) => {
       concurrent_runners: 'Dual server & client runner enabled via npm run dev'
     }
   });
-});
-
-// Serve logo and favicon requests
-app.get(['/favicon.ico', '/favicon.svg'], (req, res) => {
-  const iconPath = path.resolve(__dirname, '../frontend/public/logo/logo.svg');
-  res.setHeader('Content-Type', 'image/svg+xml');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.sendFile(iconPath);
 });
 
 // Serve logo and favicon requests
