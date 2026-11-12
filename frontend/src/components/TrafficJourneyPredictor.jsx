@@ -20,6 +20,7 @@ const LEVEL_CONFIG = {
 export default function TrafficJourneyPredictor() {
   const todayStr = new Date().toISOString().split('T')[0];
   const timePickerRef = useRef(null);
+  const timeTriggerRef = useRef(null);
 
   // Form state — empty by default so user must choose
   const [selectedDate, setSelectedDate] = useState('');
@@ -44,6 +45,19 @@ export default function TrafficJourneyPredictor() {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
+  const openTimePicker = () => {
+    setTimePickerOpen(prev => {
+      const next = !prev;
+      if (next && selectedTime) {
+        const [h, m] = selectedTime.split(':').map(Number);
+        setPickerAmPm(h >= 12 ? 'PM' : 'AM');
+        setPickerHour(String(h % 12 || 12).padStart(2, '0'));
+        setPickerMinute(String(m).padStart(2, '0'));
+      }
+      return next;
+    });
+  };
+
   const handleTimeOk = () => {
     const h = pickerHour.padStart(2, '0');
     const m = pickerMinute.padStart(2, '0');
@@ -54,12 +68,28 @@ export default function TrafficJourneyPredictor() {
     const time24 = `${String(hour24).padStart(2,'0')}:${m}`;
     setSelectedTime(time24);
     setTimePickerOpen(false);
+    timeTriggerRef.current?.focus();
   };
 
   const handleTimeClear = () => {
     setPickerHour('12'); setPickerMinute('00'); setPickerAmPm('AM');
     setSelectedTime('');
     setTimePickerOpen(false);
+    timeTriggerRef.current?.focus();
+  };
+
+  const handleTimePickerKeyDown = (e) => {
+    if (!timePickerOpen) return;
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      e.stopPropagation();
+      handleTimeOk();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      setTimePickerOpen(false);
+      timeTriggerRef.current?.focus();
+    }
   };
 
   const setQuickTime = (time24) => {
@@ -70,6 +100,7 @@ export default function TrafficJourneyPredictor() {
     setPickerHour(String(h12).padStart(2,'0'));
     setPickerMinute(String(m).padStart(2,'0'));
     setPickerAmPm(ampm);
+    setTimePickerOpen(false);
   };
 
   // Format display time (24h → 12h display)
@@ -110,6 +141,14 @@ export default function TrafficJourneyPredictor() {
   // Validate + submit
   const handleSubmit = async (e) => {
     if (e) e.preventDefault();
+
+    // If time picker is open, Enter must confirm the selected time instead of submitting
+    if (timePickerOpen) {
+      handleTimeOk();
+      return;
+    }
+    if (loading) return;
+
     setFormError('');
 
     if (!selectedDate) { setFormError('Please select a travel date.'); return; }
@@ -192,58 +231,103 @@ export default function TrafficJourneyPredictor() {
             </div>
 
             {/* Travel Time — custom picker */}
-            <div className="space-y-1.5" ref={timePickerRef}>
+            <div className="space-y-1.5 relative" ref={timePickerRef} onKeyDown={handleTimePickerKeyDown}>
               <label className="block text-sm font-medium text-slate-700">
                 Travel Time
               </label>
 
-              {/* Display field */}
-              <button
-                type="button"
-                onClick={() => setTimePickerOpen(v => !v)}
-                className={`w-full text-left border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white flex items-center justify-between ${selectedTime ? 'text-slate-800' : 'text-slate-400'}`}
-              >
-                <span>{selectedTime ? formatDisplayTime(selectedTime) : 'Select time'}</span>
-                <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                </svg>
-              </button>
+              {/* Display field + inline OK button when open */}
+              <div className="flex items-center gap-2">
+                <button
+                  ref={timeTriggerRef}
+                  type="button"
+                  onClick={openTimePicker}
+                  aria-expanded={timePickerOpen}
+                  aria-haspopup="dialog"
+                  className={`flex-1 text-left border border-slate-300 rounded-lg px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition bg-white flex items-center justify-between ${selectedTime ? 'text-slate-800' : 'text-slate-400'}`}
+                >
+                  <span>{selectedTime ? formatDisplayTime(selectedTime) : 'Select time'}</span>
+                  <svg className="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                  </svg>
+                </button>
+              </div>
 
-              {/* Picker dropdown */}
+              {/* Custom Time Picker dropdown with visible OK button beside controls */}
               {timePickerOpen && (
-                <div className="absolute z-50 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg w-64 overflow-hidden">
-                  {/* Native clock input */}
-                  <div className="flex items-center justify-center p-4 pb-3">
-                    <input
-                      type="time"
+                <div
+                  role="dialog"
+                  aria-label="Select travel time"
+                  className="absolute left-0 right-0 sm:right-auto z-50 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg p-3.5 sm:min-w-[305px]"
+                >
+                  <div className="flex items-center gap-2">
+                    {/* Hour (01-12) */}
+                    <select
                       autoFocus
-                      value={(() => {
-                        let h = parseInt(pickerHour, 10);
-                        if (pickerAmPm === 'PM' && h !== 12) h += 12;
-                        if (pickerAmPm === 'AM' && h === 12) h = 0;
-                        return `${String(h).padStart(2,'0')}:${pickerMinute}`;
-                      })()}
-                      onChange={e => {
-                        const val = e.target.value;
-                        if (!val) return;
-                        const [h, m] = val.split(':').map(Number);
-                        setPickerAmPm(h >= 12 ? 'PM' : 'AM');
-                        setPickerHour(String(h % 12 || 12).padStart(2,'0'));
-                        setPickerMinute(String(m).padStart(2,'0'));
-                      }}
-                      className="w-full border border-slate-200 rounded-lg px-3 py-2 text-base text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    />
-                  </div>
-                  {/* Footer — Clear / OK like the date picker */}
-                  <div className="flex items-center justify-between border-t border-slate-100 px-4 py-2.5">
-                    <button type="button" onClick={handleTimeClear}
-                      className="text-sm text-slate-500 hover:text-slate-700 transition">
-                      Clear
-                    </button>
-                    <button type="button" onClick={handleTimeOk}
-                      className="text-sm text-blue-600 font-semibold hover:text-blue-800 transition">
+                      aria-label="Hour"
+                      value={pickerHour}
+                      onChange={(e) => setPickerHour(e.target.value)}
+                      className="border border-slate-300 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(h => (
+                        <option key={h} value={h}>{h}</option>
+                      ))}
+                    </select>
+
+                    <span className="text-slate-500 font-bold">:</span>
+
+                    {/* Minute (00-59) */}
+                    <select
+                      aria-label="Minute"
+                      value={pickerMinute}
+                      onChange={(e) => setPickerMinute(e.target.value)}
+                      className="border border-slate-300 rounded-lg px-2 py-1.5 text-sm font-medium text-slate-800 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      {Array.from({ length: 60 }, (_, i) => String(i).padStart(2, '0')).map(m => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+
+                    {/* AM / PM toggle */}
+                    <div className="flex rounded-lg border border-slate-300 overflow-hidden shrink-0">
+                      {['AM', 'PM'].map(period => (
+                        <button
+                          key={period}
+                          type="button"
+                          onClick={() => setPickerAmPm(period)}
+                          className={`px-2 py-1.5 text-xs font-semibold transition ${
+                            pickerAmPm === period
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-slate-600 hover:bg-slate-50'
+                          }`}
+                        >
+                          {period}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Clearly visible OK button immediately beside the controls */}
+                    <button
+                      type="button"
+                      onClick={handleTimeOk}
+                      className="ml-auto px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition shrink-0"
+                    >
                       OK
                     </button>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="flex items-center justify-between border-t border-slate-100 mt-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleTimeClear}
+                      className="text-xs text-slate-500 hover:text-slate-700 transition"
+                    >
+                      Clear
+                    </button>
+                    <span className="text-[11px] text-slate-400">
+                      Press Enter or click OK
+                    </span>
                   </div>
                 </div>
               )}
