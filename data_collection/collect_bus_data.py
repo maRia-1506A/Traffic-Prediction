@@ -880,9 +880,64 @@ def save_bus_routes():
     print(f"[OK] Master CSV:  {MASTER_CSV}")
     print(f"[OK] Bus Stops:   {STOPS_JSON}")
 
+# ---------------------------------------------------------------------------
+# OpenStreetMap Overpass Bus Route Collector
+# ---------------------------------------------------------------------------
+def fetch_osm_bus_data(timeout=25):
+    """
+    Attempts to fetch live public transport relations and bus stops from
+    OpenStreetMap Overpass API with mirror fallbacks.
+    """
+    mirrors = [
+        "https://overpass-api.de/api/interpreter",
+        "https://lz4.overpass-api.de/api/interpreter",
+        "https://overpass.kumi.systems/api/interpreter"
+    ]
+    query = """
+    [out:json][timeout:25];
+    (
+      relation["route"="bus"](23.68,90.30,23.95,90.52);
+      node["highway"="bus_stop"](23.68,90.30,23.95,90.52);
+    );
+    out tags 100;
+    """
+    headers = {"User-Agent": "DhakaTrafficPulse/1.0 (transit-collector)"}
+
+    for url in mirrors:
+        try:
+            print(f"[OSM API] Trying Overpass mirror: {url} ...")
+            resp = requests.post(url, data={"data": query}, headers=headers, timeout=timeout)
+            if resp.status_code == 200:
+                data = resp.json()
+                elems = data.get("elements", [])
+                print(f"[OSM API] Success! Retrieved {len(elems)} elements from OSM.")
+                return elems
+        except Exception as e:
+            print(f"[OSM API] Mirror {url} failed: {e}")
+    return []
+
 def main():
+    parser = argparse.ArgumentParser(description="Dhaka Route-wise Bus Data Collector")
+    parser.add_argument("--osm", action="store_true", help="Attempt live OSM Overpass query for public transit tags")
+    args = parser.parse_args()
+
+    print("=" * 70)
+    print("  Dhaka Transit Network: Route-Wise Bus Data Collector")
+    print("=" * 70)
+
+    if args.osm:
+        osm_elements = fetch_osm_bus_data()
+        if osm_elements:
+            osm_export_path = os.path.join(BUS_DIR, "osm_bus_elements.json")
+            os.makedirs(BUS_DIR, exist_ok=True)
+            with open(osm_export_path, "w", encoding="utf-8") as f:
+                json.dump(osm_elements, f, indent=2)
+            print(f"[OSM API] Saved raw OSM public transit elements -> {osm_export_path}")
+
     save_bus_routes()
-    print("Done. Authentic Dhaka route-wise bus catalog compiled!")
+    print("=" * 70)
+    print("  Done. Route-wise bus catalog successfully compiled!")
+    print("=" * 70)
 
 if __name__ == "__main__":
     main()
