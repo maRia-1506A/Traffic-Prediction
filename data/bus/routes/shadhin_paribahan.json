@@ -1,0 +1,35 @@
+{
+  "id": "shadhin_paribahan",
+  "name": "Shadhin Paribahan",
+  "name_bn": "স্বাধীন পরিবহন",
+  "route_code": "SH-01",
+  "type": "Local / Semi-Seating",
+  "origin": "Mirpur 14",
+  "destination": "Gulisthan",
+  "stoppages": [
+    "Mirpur 14",
+    "Mirpur 10",
+    "Kazipara",
+    "Shewrapara",
+    "Agargaon",
+    "Bijoy Sarani",
+    "Farmgate",
+    "Karwan Bazar",
+    "Banglamotor",
+    "Shahbagh",
+    "Matsya Bhaban",
+    "Press Club",
+    "Paltan",
+    "Gulisthan"
+  ],
+  "corridors_covered": [
+    "R26",
+    "R05"
+  ],
+  "fare_min_bdt": 10,
+  "fare_max_bdt": 35,
+  "first_bus": "06:00 AM",
+  "last_bus": "11:00 PM",
+  "frequency_min": 5,
+  "operator": "Shadhin Paribahan Ltd."
+}
