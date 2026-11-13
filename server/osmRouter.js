@@ -269,7 +269,7 @@ export function buildOsmRouteGeometry(waypointCoords, routeLabel = 'Primary Corr
 
     if (hop && hop.length >= 2) {
       // Connect exact requested start point if slightly offset from nearest OSM node
-      if (i === 0 && approxKm(c1, hop[0].pt) > 0.03) {
+      if (i === 0 && approxKm(c1, hop[0].pt) > 0.0001) {
         allEdgeSteps.push({
           fromPt: c1,
           toPt: hop[0].pt,
@@ -291,7 +291,7 @@ export function buildOsmRouteGeometry(waypointCoords, routeLabel = 'Primary Corr
         });
       }
 
-      if (i === waypointCoords.length - 2 && approxKm(hop[hop.length - 1].pt, c2) > 0.03) {
+      if (i === waypointCoords.length - 2 && approxKm(hop[hop.length - 1].pt, c2) > 0.0001) {
         allEdgeSteps.push({
           fromPt: hop[hop.length - 1].pt,
           toPt: c2,
@@ -339,6 +339,25 @@ export function buildOsmRouteGeometry(waypointCoords, routeLabel = 'Primary Corr
       if (sIdx === 0 || pIdx > 0) coordinates.push(pt);
     });
   });
+
+  // Guarantee exact connection to origin and destination waypoints
+  if (waypointCoords.length >= 2) {
+    const startWp = waypointCoords[0];
+    const endWp = waypointCoords[waypointCoords.length - 1];
+    if (coordinates.length >= 1 && (coordinates[0][0] !== startWp[0] || coordinates[0][1] !== startWp[1])) {
+      coordinates.unshift(startWp);
+      if (segments.length > 0 && segments[0].coordinates) {
+        segments[0].coordinates.unshift(startWp);
+      }
+    }
+    const lastCoord = coordinates[coordinates.length - 1];
+    if (coordinates.length >= 1 && (lastCoord[0] !== endWp[0] || lastCoord[1] !== endWp[1])) {
+      coordinates.push(endWp);
+      if (segments.length > 0 && segments[segments.length - 1].coordinates) {
+        segments[segments.length - 1].coordinates.push(endWp);
+      }
+    }
+  }
 
   return { coordinates, segments };
 }
@@ -451,5 +470,63 @@ export function findRouteCheckpoints(routeCoords, fromName, toName, explicitStep
   }
 
   return spaced;
+}
+
+/**
+ * Segment an external polyline (e.g. decoded Google Routes polyline) using nearest OSM road names
+ */
+export function segmentPolylineWithOsmNames(coords, fallbackLabel = 'Primary Corridor') {
+  if (!Array.isArray(coords) || coords.length < 2) return [];
+  const { adj, coordsMap, grid, available } = loadOsmGraph();
+
+  const findNearestEdgeMeta = (pt) => {
+    if (!available) return { name: fallbackLabel, highway: 'primary', wayId: '' };
+    const gx = Math.floor(pt[0] * 50);
+    const gy = Math.floor(pt[1] * 50);
+    let bestKey = null;
+    let bestDist = Infinity;
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        const cell = grid.get(`${gx + dx},${gy + dy}`);
+        if (!cell) continue;
+        for (const k of cell) {
+          const d = approxKm(pt, coordsMap.get(k));
+          if (d < bestDist) { bestDist = d; bestKey = k; }
+        }
+      }
+    }
+    if (bestKey && bestDist <= 0.25) {
+      const edges = adj.get(bestKey);
+      if (edges && edges.length > 0) {
+        const named = edges.find(e => e.hasExplicitName) || edges[0];
+        return { name: named.name || fallbackLabel, highway: named.highway || 'primary', wayId: named.wayId || '' };
+      }
+    }
+    return { name: fallbackLabel, highway: 'primary', wayId: '' };
+  };
+
+  const segments = [];
+  for (let i = 1; i < coords.length; i++) {
+    const a = coords[i - 1];
+    const b = coords[i];
+    const mid = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const meta = findNearestEdgeMeta(mid);
+    const dKm = approxKm(a, b);
+    const prev = segments[segments.length - 1];
+    if (prev && prev.name === meta.name) {
+      prev.coordinates.push(b);
+      prev.distance_km = Number((prev.distance_km + dKm).toFixed(2));
+    } else {
+      segments.push({
+        id: `seg-${segments.length}`,
+        name: meta.name,
+        highway: meta.highway,
+        way_id: meta.wayId,
+        distance_km: Number(dKm.toFixed(2)),
+        coordinates: [a, b],
+      });
+    }
+  }
+  return segments;
 }
 

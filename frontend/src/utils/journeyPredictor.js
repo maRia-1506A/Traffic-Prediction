@@ -5,7 +5,10 @@ import {
   ALL_DHAKA_LOCATIONS,
   NODE_COORDINATES,
   OFFICIAL_ROUTES,
-  DHAKA_BYPASS_WAYPOINTS
+  ALL_ROUTES,
+  DHAKA_BYPASS_WAYPOINTS,
+  HOURLY_HISTORICAL_PROFILE,
+  CORRIDOR_HISTORICAL_STATS
 } from './dhakaRoutesData.js';
 
 export function haversineKm(c1, c2) {
@@ -65,36 +68,70 @@ export function findRouteBetween(from, to) {
     };
   }
 
-  // 1. Check if directly present in any official corridor
-  for (const r of OFFICIAL_ROUTES) {
+  // 1. Priority 1: Check for exact endpoint corridor match across corridors
+  const candidateRoutes = ALL_ROUTES && ALL_ROUTES.length > 0 ? ALL_ROUTES : OFFICIAL_ROUTES;
+
+  for (const r of candidateRoutes) {
     const parts = r.route_path.split('->').map(p => p.trim());
-    const fIdx = parts.findIndex(p => p.toLowerCase() === fTrim.toLowerCase());
-    const tIdx = parts.findIndex(p => p.toLowerCase() === tTrim.toLowerCase());
+    const isDirect = (parts[0].toLowerCase() === fTrim.toLowerCase() && parts[parts.length - 1].toLowerCase() === tTrim.toLowerCase());
+    const isReverse = (parts[parts.length - 1].toLowerCase() === fTrim.toLowerCase() && parts[0].toLowerCase() === tTrim.toLowerCase());
 
-    if (fIdx !== -1 && tIdx !== -1 && fIdx !== tIdx) {
-      const sub =
-        fIdx < tIdx
-          ? parts.slice(fIdx, tIdx + 1)
-          : parts.slice(tIdx, fIdx + 1).reverse();
-
-      // Estimate distance based on proportion or coordinates
+    if (isDirect || isReverse) {
+      const sub = isDirect ? parts : [...parts].reverse();
       const origCoords = NODE_COORDINATES[fTrim] || r.origin_coords;
       const destCoords = NODE_COORDINATES[tTrim] || r.dest_coords;
       const directDist = haversineKm(origCoords, destCoords);
-      const distKm = Math.max(
-        1.5,
-        Number((directDist * 1.32).toFixed(1))
-      );
-      const freeFlowMin = Math.max(
-        3.0,
-        Number(((distKm / 35.0) * 60.0).toFixed(1))
-      );
+      const distKm = r.road_length_km || Math.max(1.5, Number((directDist * 1.32).toFixed(1)));
+      const freeFlowSpeed = (r.route_path || '').toLowerCase().includes('expressway') ? 50.0 : 35.0;
+      const freeFlowMin = r.free_flow_time_min || Math.max(2.5, Number(((distKm / freeFlowSpeed) * 60.0).toFixed(1)));
+      const checkpoints = sub.slice(1, -1).map(name => ({
+        name,
+        coords: NODE_COORDINATES[name] || null
+      })).filter(c => c.coords);
 
       return {
         route_code: r.route_code,
         name: `${fTrim} to ${tTrim}`,
         path: sub.join(' -> '),
         steps: sub,
+        checkpoints,
+        distance_km: distKm,
+        free_flow_time_min: freeFlowMin,
+        matchedCorridor: r.route_id
+      };
+    }
+  }
+
+  // 2. Priority 2: Check if sub-path present in any corridor
+  for (const r of candidateRoutes) {
+    const parts = r.route_path.split('->').map(p => p.trim());
+    const fIdx = parts.findIndex(p => p.toLowerCase() === fTrim.toLowerCase());
+    const tIdx = parts.findIndex(p => p.toLowerCase() === tTrim.toLowerCase());
+
+    if (fIdx !== -1 && tIdx !== -1 && Math.abs(fIdx - tIdx) > 1) {
+      const sub =
+        fIdx < tIdx
+          ? parts.slice(fIdx, tIdx + 1)
+          : parts.slice(tIdx, fIdx + 1).reverse();
+
+      const checkpoints = sub.slice(1, -1).map(name => ({
+        name,
+        coords: NODE_COORDINATES[name] || null
+      })).filter(c => c.coords);
+
+      const origCoords = NODE_COORDINATES[fTrim] || r.origin_coords;
+      const destCoords = NODE_COORDINATES[tTrim] || r.dest_coords;
+      const directDist = haversineKm(origCoords, destCoords);
+      const distKm = Math.max(1.5, Number((directDist * 1.32).toFixed(1)));
+      const freeFlowSpeed = (r.route_path || '').toLowerCase().includes('expressway') ? 50.0 : 35.0;
+      const freeFlowMin = Math.max(2.5, Number(((distKm / freeFlowSpeed) * 60.0).toFixed(1)));
+
+      return {
+        route_code: r.route_code,
+        name: `${fTrim} to ${tTrim}`,
+        path: sub.join(' -> '),
+        steps: sub,
+        checkpoints,
         distance_km: distKm,
         free_flow_time_min: freeFlowMin,
         matchedCorridor: r.route_id
@@ -125,44 +162,85 @@ export function findRouteBetween(from, to) {
     }
   }
 
-  if (shortestSteps && shortestSteps.length > 1) {
+  if (shortestSteps && shortestSteps.length > 2) {
     const origCoords = NODE_COORDINATES[fTrim] || [23.8103, 90.4125];
     const destCoords = NODE_COORDINATES[tTrim] || [23.7500, 90.3900];
     const directDist = haversineKm(origCoords, destCoords);
     const distKm = Math.max(1.8, Number((directDist * 1.35).toFixed(1)));
     const freeFlowMin = Math.max(3.5, Number(((distKm / 35.0) * 60.0).toFixed(1)));
+    const checkpoints = shortestSteps.slice(1, -1).map(name => ({
+      name,
+      coords: NODE_COORDINATES[name] || null
+    })).filter(c => c.coords);
 
     return {
       route_code: 'CONNECTED',
       name: `${fTrim} to ${tTrim} (via Corridor Network)`,
       path: shortestSteps.join(' -> '),
       steps: shortestSteps,
+      checkpoints,
       distance_km: distKm,
       free_flow_time_min: freeFlowMin,
       matchedCorridor: 'Multi-corridor transit'
     };
   }
 
-  // 3. Fallback direct geometric route
+  // 3. Vector projection over strategic nodes & flyovers along travel corridor
   const origCoords = NODE_COORDINATES[fTrim] || [23.8103, 90.4125];
   const destCoords = NODE_COORDINATES[tTrim] || [23.7500, 90.3900];
   const directDist = haversineKm(origCoords, destCoords);
-  const distKm = Math.max(2.0, Number((directDist * 1.38).toFixed(1)));
+  const abLat = destCoords[0] - origCoords[0];
+  const abLon = destCoords[1] - origCoords[1];
+  const abLen2 = abLat * abLat + abLon * abLon;
+
+  const pool = [];
+  const allNodes = { ...NODE_COORDINATES };
+  for (const wp of DHAKA_BYPASS_WAYPOINTS) allNodes[wp.name] = wp.coords;
+
+  for (const [name, coord] of Object.entries(allNodes)) {
+    if (name.toLowerCase() === fTrim.toLowerCase() || name.toLowerCase() === tTrim.toLowerCase()) continue;
+    if (haversineKm(origCoords, coord) < 0.6 || haversineKm(destCoords, coord) < 0.6) continue;
+    const t = ((coord[0] - origCoords[0]) * abLat + (coord[1] - origCoords[1]) * abLon) / abLen2;
+    if (t <= 0.05 || t >= 0.95) continue;
+    const proj = [origCoords[0] + t * abLat, origCoords[1] + t * abLon];
+    const distFromCorridor = haversineKm(coord, proj);
+    const maxOffset = Math.max(1.0, Math.min(2.8, directDist * 0.32));
+    if (distFromCorridor <= maxOffset) {
+      pool.push({ name, coord, t });
+    }
+  }
+  pool.sort((a, b) => a.t - b.t);
+
+  const picked = [];
+  for (const item of pool) {
+    if (picked.every(p => haversineKm(p.coord, item.coord) >= 1.0)) {
+      picked.push(item);
+      if (picked.length >= 3) break;
+    }
+  }
+
+  const resolvedSteps = picked.length > 0
+    ? [fTrim, ...picked.map(p => p.name), tTrim]
+    : [fTrim, tTrim];
+
+  const checkpoints = picked.map(p => ({ name: p.name, coords: p.coord }));
+  const distKm = Math.max(2.0, Number((directDist * 1.35).toFixed(1)));
   const freeFlowMin = Math.max(4.0, Number(((distKm / 35.0) * 60.0).toFixed(1)));
 
   return {
     route_code: 'DIRECT',
     name: `${fTrim} to ${tTrim}`,
-    path: `${fTrim} -> Connecting Arterial -> ${tTrim}`,
-    steps: [fTrim, 'Connecting Arterial', tTrim],
+    path: resolvedSteps.join(' -> '),
+    steps: resolvedSteps,
+    checkpoints,
     distance_km: distKm,
     free_flow_time_min: freeFlowMin,
-    matchedCorridor: 'Direct Arterial Link'
+    matchedCorridor: 'Dhaka Arterial Network'
   };
 }
 
 // Alternative bypass suggestions
-export function findAlternativeBypass(from, to, primaryRoute, trafficLevel) {
+export function findAlternativeBypasses(from, to, primaryRoute, trafficLevel) {
   const origCoords = NODE_COORDINATES[from] || [23.8103, 90.4125];
   const destCoords = NODE_COORDINATES[to] || [23.7500, 90.3900];
   const directDist = haversineKm(origCoords, destCoords);
@@ -174,25 +252,26 @@ export function findAlternativeBypass(from, to, primaryRoute, trafficLevel) {
     const d2 = haversineKm(wp.coords, destCoords);
     const totalDist = d1 + d2;
 
-    // Filter bypasses reasonably located along the path
     if (totalDist <= Math.max(directDist * 1.7, directDist + 5.0) && d1 > 0.4 && d2 > 0.4) {
       const altDist = Number((totalDist * 1.15).toFixed(1));
       const bypassSpeed = wp.speed || 40.0;
       const altTt = Number(((altDist / bypassSpeed) * 60.0).toFixed(1));
       const timeSaved = Number((primaryRoute.travel_time_min - altTt).toFixed(1));
-
-      // Google Maps Direct Navigation Link with waypoint
       const bypassGmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origCoords[0]},${origCoords[1]}&destination=${destCoords[0]},${destCoords[1]}&waypoints=${wp.coords[0]},${wp.coords[1]}&travelmode=driving`;
 
       candidateBypasses.push({
+        id: `alt-${candidateBypasses.length + 1}`,
         name: `OSM Bypass via ${wp.name}`,
         via: wp.name,
         tag: wp.tag,
         coords: wp.coords,
+        road_coords: [origCoords, wp.coords, destCoords],
+        checkpoints: [{ name: wp.name, coords: wp.coords }],
         distance_km: altDist,
         travel_time_min: Math.max(altTt, 4.0),
         time_saved_min: timeSaved,
         bypass_speed_kmh: bypassSpeed,
+        traffic_prediction: timeSaved >= 0 ? 'Low' : 'Medium',
         google_maps_url: bypassGmapsUrl,
         path: `${from} -> ${wp.name} [${wp.tag}] -> ${to}`,
         steps: [from, `${wp.name} (${wp.tag})`, to],
@@ -206,40 +285,13 @@ export function findAlternativeBypass(from, to, primaryRoute, trafficLevel) {
     }
   }
 
-  // Sort by time saved descending
   candidateBypasses.sort((a, b) => b.time_saved_min - a.time_saved_min);
+  return candidateBypasses.slice(0, 3);
+}
 
-  if (candidateBypasses.length > 0) {
-    const best = candidateBypasses[0];
-    return {
-      has_alternative: true,
-      ...best
-    };
-  }
-
-  // Default fallback bypass if no specific waypoint was within range
-  const fallbackDist = Number((primaryRoute.distance_km * 1.12).toFixed(1));
-  const fallbackTt = Math.max(
-    4.0,
-    Number((primaryRoute.travel_time_min * 0.72).toFixed(1))
-  );
-  const saved = Number((primaryRoute.travel_time_min - fallbackTt).toFixed(1));
-
-  return {
-    has_alternative: true,
-    name: `Secondary Arterial Bypass Corridor`,
-    via: `Dhaka Ring Road / Parallel Connector`,
-    tag: `Arterial Bypass`,
-    coords: [23.7845, 90.3475],
-    distance_km: fallbackDist,
-    travel_time_min: fallbackTt,
-    time_saved_min: Math.max(1.5, saved),
-    bypass_speed_kmh: 36.0,
-    google_maps_url: `https://www.google.com/maps/dir/?api=1&origin=${origCoords[0]},${origCoords[1]}&destination=${destCoords[0]},${destCoords[1]}&travelmode=driving`,
-    path: `${from} -> Secondary Link Road -> Outer Bypass -> ${to}`,
-    steps: [from, 'Secondary Link Road', 'Outer Bypass', to],
-    reason: `Reroutes around the primary arterial bottlenecks using parallel urban connector roads.`
-  };
+export function findAlternativeBypass(from, to, primaryRoute, trafficLevel) {
+  const alts = findAlternativeBypasses(from, to, primaryRoute, trafficLevel);
+  return alts[0] || null;
 }
 
 // Master Journey Predictor Function
@@ -280,117 +332,97 @@ export function predictJourneyTraffic({
   const minute = parseInt(mStr || '0', 10);
   const floatHour = hour + minute / 60.0;
 
-  // 3. Traffic Congestion Factor based on Dhaka commuter traffic patterns
-  let rushFactor = 1.0;
-  let periodLabel = 'Off-Peak Hours';
+  // 3. Find primary route
+  const routeMatch = findRouteBetween(from, to);
+  const targetHour = floatHour === 0 ? 24.0 : floatHour;
+  const roundedHour = Math.min(24, Math.max(1, Math.round(targetHour)));
 
+  // 4. Data-driven statistical traffic model from historical dataset
+  const hourlyProfile = HOURLY_HISTORICAL_PROFILE[String(roundedHour)] || { speed: 26.5, delay: 4.5, ratio: 1.18 };
+  const corridorStats = CORRIDOR_HISTORICAL_STATS[routeMatch.route_code];
+
+  // Dynamic Period Label based on Dhaka commuting reality
+  let periodLabel = 'Off-Peak Hours';
   if (!isWeekend) {
-    // Weekdays (Sunday to Thursday in Bangladesh)
-    if (floatHour >= 7.75 && floatHour <= 10.75) {
-      rushFactor = 2.65;
+    if (floatHour >= 7.5 && floatHour <= 10.5) {
       periodLabel = 'Morning Peak Rush (Commute to Work / Schools)';
-    } else if (floatHour >= 16.5 && floatHour <= 21.0) {
-      rushFactor = 2.85;
+    } else if (floatHour >= 16.5 && floatHour <= 20.5) {
       periodLabel = 'Evening Peak Rush (Commute Return / Commercial Gridlock)';
-    } else if (floatHour >= 11.0 && floatHour <= 16.25) {
-      rushFactor = 1.48;
-      periodLabel = 'Midday Flow (School Dispersal & Active Commerce)';
-    } else if (floatHour >= 21.0 && floatHour <= 23.0) {
-      rushFactor = 1.25;
+    } else if (floatHour >= 10.5 && floatHour <= 16.5) {
+      periodLabel = 'Midday Flow (Active Commerce & School Dispersal)';
+    } else if (floatHour >= 20.5 && floatHour <= 23.0) {
       periodLabel = 'Late Evening (Commercial Dispersal & Truck Entry)';
     } else {
-      rushFactor = 1.0;
       periodLabel = 'Night / Early Morning Free Flow';
     }
   } else if (isFriday) {
-    // Friday (Official Bangladesh Holiday)
     if (floatHour >= 16.0 && floatHour <= 21.5) {
-      rushFactor = 1.42;
       periodLabel = 'Friday Evening Outing & Shopping Traffic';
     } else {
-      rushFactor = 1.02;
       periodLabel = 'Friday Holiday Free Flow';
     }
   } else if (isSaturday) {
-    // Saturday (Partial work/university day)
-    if (floatHour >= 9.0 && floatHour <= 11.5) {
-      rushFactor = 1.7;
+    if (floatHour >= 9.0 && floatHour <= 12.0) {
       periodLabel = 'Saturday Morning Flow';
-    } else if (floatHour >= 17.0 && floatHour <= 20.5) {
-      rushFactor = 1.85;
+    } else if (floatHour >= 16.5 && floatHour <= 21.0) {
       periodLabel = 'Saturday Evening Outing';
     } else {
-      rushFactor = 1.1;
       periodLabel = 'Saturday Regular Flow';
     }
   }
 
-  // 4. Find primary route
-  const routeMatch = findRouteBetween(from, to);
+  // Calculate speed and travel time grounded in historical records
+  const distKm = routeMatch.distance_km;
+  const freeFlowSpeed = (routeMatch.matchedCorridor || '').toLowerCase().includes('expressway') ? 50.0 : 35.0;
+  const freeFlowMin = routeMatch.free_flow_time_min || Math.max(2.5, Number(((distKm / freeFlowSpeed) * 60.0).toFixed(1)));
 
-  // Check if route passes through notoriously severe choke points
-  let bottleneckAddon = 1.0;
-  const pathStr = routeMatch.path || '';
-  if (
-    pathStr.includes('Farmgate') ||
-    pathStr.includes('Mirpur 10') ||
-    pathStr.includes('Mohakhali') ||
-    pathStr.includes('Kazipara') ||
-    pathStr.includes('Rokeya Sarani')
-  ) {
-    bottleneckAddon = 1.15;
-  } else if (
-    pathStr.includes('Jatrabari') ||
-    pathStr.includes('Gulistan') ||
-    pathStr.includes('Kuril') ||
-    pathStr.includes('Airport')
-  ) {
-    bottleneckAddon = 1.1;
+  let baselineSpeed = hourlyProfile.speed;
+  if (corridorStats && corridorStats.count > 0) {
+    const hourlySpeedFactor = hourlyProfile.speed / 26.5;
+    baselineSpeed = Math.min(
+      corridorStats.max_speed,
+      Math.max(corridorStats.min_speed, corridorStats.avg_speed * hourlySpeedFactor)
+    );
   }
 
-  const totalMultiplier = rushFactor * bottleneckAddon;
-  const freeFlowMin = routeMatch.free_flow_time_min;
-  const distKm = routeMatch.distance_km;
-
-  const travelTimeMin = Number((freeFlowMin * totalMultiplier).toFixed(1));
-  const delayMin = Math.max(0, Number((travelTimeMin - freeFlowMin).toFixed(1)));
-  const speedKmh = Math.max(
-    5.0,
-    Number((distKm / Math.max(travelTimeMin / 60.0, 0.05)).toFixed(1))
-  );
+  const travelTimeMin = Number(Math.max(freeFlowMin, (distKm / Math.max(baselineSpeed, 5.0)) * 60.0).toFixed(1));
+  const delayMin = Number(Math.max(0, travelTimeMin - freeFlowMin).toFixed(1));
+  const speedKmh = Number(Math.max(5.0, distKm / Math.max(travelTimeMin / 60.0, 0.05)).toFixed(1));
   const congestionRatio = Number((travelTimeMin / freeFlowMin).toFixed(2));
 
-  // 5. Traffic Prediction Level: "High", "Medium", "Low"
+  // 5. Traffic Prediction Level: "High", "Medium", "Low" calibrated to empirical dataset
   let trafficPrediction = 'Low';
   let badgeColor = 'emerald';
-  let levelDescription = 'Smooth traffic with free flowing speeds and minimal waiting.';
+  let levelDescription = 'Roads are flowing freely with minimal stops. Good time to travel.';
 
-  if (totalMultiplier >= 2.1 || congestionRatio >= 2.0 || delayMin >= 15.0 || speedKmh < 14.0) {
+  if (congestionRatio >= 1.85 || (speedKmh < 15.0 && delayMin >= 12.0)) {
     trafficPrediction = 'High';
     badgeColor = 'rose';
-    levelDescription =
-      'Heavy congestion and severe delays detected on this route. Expect stop-and-go jams.';
-  } else if (totalMultiplier >= 1.35 || congestionRatio >= 1.3 || delayMin >= 4.0 || speedKmh < 24.0) {
+    levelDescription = 'Severe congestion and long queue delays expected on this route. Allow extra time.';
+  } else if (congestionRatio >= 1.35 || (speedKmh < 23.0 && delayMin >= 5.0)) {
     trafficPrediction = 'Medium';
     badgeColor = 'amber';
-    levelDescription =
-      'Moderate traffic density. Vehicles moving steadily with periodic intersection queues.';
-  } else {
-    trafficPrediction = 'Low';
-    badgeColor = 'emerald';
-    levelDescription =
-      'Free flow traffic with minimal transit delays and normal cruising speeds.';
+    levelDescription = 'Moderate traffic density with steady speed and periodic intersection queues.';
   }
 
   const origCoords = NODE_COORDINATES[from] || [23.8103, 90.4125];
   const destCoords = NODE_COORDINATES[to] || [23.7500, 90.3900];
   const primaryGmapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${origCoords[0]},${origCoords[1]}&destination=${destCoords[0]},${destCoords[1]}&travelmode=driving`;
 
+  const checkpoints = routeMatch.checkpoints || [];
+  const roadCoords = [
+    origCoords,
+    ...checkpoints.map(c => c.coords).filter(Boolean),
+    destCoords
+  ];
+
   const primaryRouteInfo = {
     name: routeMatch.name,
     route_code: routeMatch.route_code || 'R-COMMUTER',
     path: routeMatch.path,
     steps: routeMatch.steps,
+    checkpoints,
+    road_coords: roadCoords,
     origin_coords: origCoords,
     dest_coords: destCoords,
     distance_km: distKm,
@@ -404,7 +436,7 @@ export function predictJourneyTraffic({
   };
 
   // 6. Alternative route evaluation
-  const alternativeRouteInfo = findAlternativeBypass(
+  const alternativeRoutes = findAlternativeBypasses(
     from,
     to,
     primaryRouteInfo,
@@ -424,8 +456,9 @@ export function predictJourneyTraffic({
     levelDescription,
     confidence: '95.4%',
     primary_route: primaryRouteInfo,
-    has_alternative: true,
-    alternative_route: alternativeRouteInfo
+    has_alternative: alternativeRoutes.length > 0,
+    alternative_route: alternativeRoutes[0] || null,
+    alternative_routes: alternativeRoutes
   };
 }
 

@@ -2,6 +2,9 @@
 // Pure JavaScript data - clean separation from Python collection scripts
 
 export const NODE_COORDINATES = {
+  "Kalyanpur": [23.7818, 90.3592],
+  "Postogola": [23.6920, 90.4350],
+  "Karwan Bazar": [23.7516, 90.3934],
   "ECB Chattor": [
     23.8228,
     90.3932
@@ -1512,4 +1515,1087 @@ export const OFFICIAL_ROUTES = [
   }
 ];
 
+export const EXTENDED_ROUTES_RAW = [
+  { id: "R51", path: "Airport -> Banani" },
+  { id: "R52", path: "Asad Gate -> Farmgate" },
+  { id: "R53", path: "Badda -> Rampura Bridge" },
+  { id: "R54", path: "Bijoy Sarani -> Mohakhali" },
+  { id: "R55", path: "Dhanmondi 27 -> Science Lab" },
+  { id: "R56", path: "ECB Chattor -> Airport" },
+  { id: "R57", path: "ECB Chattor -> Banani" },
+  { id: "R58", path: "ECB Chattor -> Kuril" },
+  { id: "R59", path: "ECB Chattor -> Mirpur 12" },
+  { id: "R60", path: "Farmgate -> Shahbagh" },
+  { id: "R61", path: "Gabtoli -> Dhanmondi 27" },
+  { id: "R62", path: "Gabtoli -> Kalyanpur" },
+  { id: "R63", path: "Gabtoli -> Savar" },
+  { id: "R64", path: "Gulistan -> Sadarghat" },
+  { id: "R65", path: "Gulshan 1 -> Badda Link Road" },
+  { id: "R66", path: "Gulshan 1 -> Mohakhali" },
+  { id: "R67", path: "Gulshan 2 -> Gulshan 1" },
+  { id: "R68", path: "Jatrabari -> Sayedabad" },
+  { id: "R69", path: "Kakrail -> Motijheel" },
+  { id: "R70", path: "Kalyanpur -> Shyamoli" },
+  { id: "R71", path: "Karwan Bazar -> Shahbagh" },
+  { id: "R72", path: "Kuril -> Mohakhali" },
+  { id: "R73", path: "Kuril -> Notun Bazar" },
+  { id: "R74", path: "Malibagh -> Kakrail" },
+  { id: "R75", path: "Mirpur 1 -> Dhanmondi 27" },
+  { id: "R76", path: "Mirpur 1 -> Gabtoli" },
+  { id: "R77", path: "Mirpur 10 -> Agargaon" },
+  { id: "R78", path: "Mirpur 10 -> ECB Chattor" },
+  { id: "R79", path: "Mirpur 10 -> Karwan Bazar" },
+  { id: "R80", path: "Mirpur 12 -> ECB Chattor" },
+  { id: "R81", path: "Mirpur 12 -> Mirpur 10" },
+  { id: "R82", path: "Mohammadpur -> Dhanmondi 27" },
+  { id: "R83", path: "Mohammadpur -> Farmgate" },
+  { id: "R84", path: "Motijheel -> Gulistan" },
+  { id: "R85", path: "Postogola -> Jatrabari" },
+  { id: "R86", path: "Rampura -> Malibagh" },
+  { id: "R87", path: "Savar -> Ashulia" },
+  { id: "R88", path: "Savar -> Dhanmondi" },
+  { id: "R89", path: "Savar -> Gabtoli" },
+  { id: "R90", path: "Sayedabad -> Motijheel" },
+  { id: "R91", path: "Science Lab -> New Market" },
+  { id: "R92", path: "Science Lab -> Shahbagh" },
+  { id: "R93", path: "Shahbagh -> Motijheel" },
+  { id: "R94", path: "Shyamoli -> Asad Gate" },
+  { id: "R95", path: "Tongi -> Uttara" },
+  { id: "R96", path: "Uttara -> Airport" },
+  { id: "R97", path: "Uttara -> Kuril" },
+  { id: "R98", path: "Uttara -> Mohakhali" }
+];
+
+export const EXTENDED_ROUTES = EXTENDED_ROUTES_RAW.map(item => {
+  const parts = item.path.split('->').map(s => s.trim());
+  const originName = parts[0];
+  const destName = parts[parts.length - 1];
+  const originCoords = NODE_COORDINATES[originName] || [23.8103, 90.4125];
+  const destCoords = NODE_COORDINATES[destName] || [23.8103, 90.4125];
+  return {
+    route_code: item.id,
+    route_id: `${item.id}: ${originName} -> ${destName}`,
+    route_path: item.path,
+    origin_name: originName,
+    dest_name: destName,
+    origin_coords: originCoords,
+    dest_coords: destCoords,
+    road_length_km: 6.5,
+    free_flow_time_min: 10.5,
+    road_type: "Secondary Urban",
+    is_official: false,
+    category: "Extended Historical Corridor"
+  };
+});
+
+export const ALL_ROUTES = [...OFFICIAL_ROUTES, ...EXTENDED_ROUTES];
+
 export const ALL_DHAKA_LOCATIONS = Object.keys(NODE_COORDINATES).sort();
+
+export const HOURLY_HISTORICAL_PROFILE = {
+  "1": {
+    "speed": 48.0,
+    "delay": 0.1,
+    "ratio": 0.9
+  },
+  "2": {
+    "speed": 53.2,
+    "delay": 0.0,
+    "ratio": 0.88
+  },
+  "3": {
+    "speed": 48.0,
+    "delay": 0.1,
+    "ratio": 0.9
+  },
+  "4": {
+    "speed": 48.0,
+    "delay": 0.1,
+    "ratio": 0.9
+  },
+  "5": {
+    "speed": 48.0,
+    "delay": 0.1,
+    "ratio": 0.9
+  },
+  "6": {
+    "speed": 48.0,
+    "delay": 0.1,
+    "ratio": 0.9
+  },
+  "7": {
+    "speed": 34.4,
+    "delay": 3.3,
+    "ratio": 1.16
+  },
+  "8": {
+    "speed": 18.1,
+    "delay": 25.9,
+    "ratio": 2.24
+  },
+  "9": {
+    "speed": 29.1,
+    "delay": 9.0,
+    "ratio": 1.46
+  },
+  "10": {
+    "speed": 54.0,
+    "delay": 0.7,
+    "ratio": 1.12
+  },
+  "11": {
+    "speed": 22.9,
+    "delay": 5.1,
+    "ratio": 1.15
+  },
+  "12": {
+    "speed": 21.7,
+    "delay": 6.2,
+    "ratio": 1.19
+  },
+  "13": {
+    "speed": 36.6,
+    "delay": 2.3,
+    "ratio": 1.16
+  },
+  "14": {
+    "speed": 44.2,
+    "delay": 2.9,
+    "ratio": 1.13
+  },
+  "15": {
+    "speed": 22.8,
+    "delay": 5.8,
+    "ratio": 1.17
+  },
+  "16": {
+    "speed": 26.7,
+    "delay": 5.2,
+    "ratio": 1.16
+  },
+  "17": {
+    "speed": 12.4,
+    "delay": 50.5,
+    "ratio": 3.44
+  },
+  "18": {
+    "speed": 16.1,
+    "delay": 30.6,
+    "ratio": 2.5
+  },
+  "19": {
+    "speed": 19.1,
+    "delay": 22.4,
+    "ratio": 2.1
+  },
+  "20": {
+    "speed": 28.4,
+    "delay": 12.3,
+    "ratio": 1.5
+  },
+  "21": {
+    "speed": 33.0,
+    "delay": 4.3,
+    "ratio": 1.22
+  },
+  "22": {
+    "speed": 34.7,
+    "delay": 2.9,
+    "ratio": 1.15
+  },
+  "23": {
+    "speed": 26.5,
+    "delay": 0.8,
+    "ratio": 0.95
+  },
+  "24": {
+    "speed": 31.8,
+    "delay": 0.2,
+    "ratio": 0.88
+  }
+};
+
+export const CORRIDOR_HISTORICAL_STATS = {
+  "R01": {
+    "count": 13,
+    "dist_km": 8.39,
+    "avg_speed": 22.8,
+    "min_speed": 16.5,
+    "max_speed": 43.1,
+    "avg_delay": 2.3,
+    "avg_ratio": 1.02
+  },
+  "R02": {
+    "count": 13,
+    "dist_km": 20.22,
+    "avg_speed": 29.2,
+    "min_speed": 23.7,
+    "max_speed": 38.1,
+    "avg_delay": 3.0,
+    "avg_ratio": 1.05
+  },
+  "R03": {
+    "count": 13,
+    "dist_km": 16.73,
+    "avg_speed": 23.9,
+    "min_speed": 19.1,
+    "max_speed": 37.5,
+    "avg_delay": 1.6,
+    "avg_ratio": 1.03
+  },
+  "R04": {
+    "count": 13,
+    "dist_km": 15.29,
+    "avg_speed": 29.1,
+    "min_speed": 20.4,
+    "max_speed": 77.5,
+    "avg_delay": 2.9,
+    "avg_ratio": 1.06
+  },
+  "R05": {
+    "count": 13,
+    "dist_km": 5.27,
+    "avg_speed": 26.4,
+    "min_speed": 15.8,
+    "max_speed": 80.0,
+    "avg_delay": 2.6,
+    "avg_ratio": 1.14
+  },
+  "R06": {
+    "count": 13,
+    "dist_km": 9.9,
+    "avg_speed": 21.0,
+    "min_speed": 14.6,
+    "max_speed": 36.2,
+    "avg_delay": 7.8,
+    "avg_ratio": 1.2
+  },
+  "R07": {
+    "count": 13,
+    "dist_km": 7.25,
+    "avg_speed": 25.5,
+    "min_speed": 19.7,
+    "max_speed": 36.2,
+    "avg_delay": 1.7,
+    "avg_ratio": 1.03
+  },
+  "R08": {
+    "count": 13,
+    "dist_km": 15.19,
+    "avg_speed": 32.7,
+    "min_speed": 26.1,
+    "max_speed": 63.6,
+    "avg_delay": 4.0,
+    "avg_ratio": 1.07
+  },
+  "R09": {
+    "count": 13,
+    "dist_km": 27.82,
+    "avg_speed": 30.9,
+    "min_speed": 24.3,
+    "max_speed": 56.7,
+    "avg_delay": 10.6,
+    "avg_ratio": 1.13
+  },
+  "R10": {
+    "count": 13,
+    "dist_km": 8.76,
+    "avg_speed": 27.8,
+    "min_speed": 17.0,
+    "max_speed": 36.2,
+    "avg_delay": 1.0,
+    "avg_ratio": 0.98
+  },
+  "R11": {
+    "count": 13,
+    "dist_km": 21.93,
+    "avg_speed": 25.9,
+    "min_speed": 20.5,
+    "max_speed": 36.8,
+    "avg_delay": 2.6,
+    "avg_ratio": 1.04
+  },
+  "R12": {
+    "count": 13,
+    "dist_km": 17.52,
+    "avg_speed": 32.9,
+    "min_speed": 23.1,
+    "max_speed": 79.8,
+    "avg_delay": 6.6,
+    "avg_ratio": 1.13
+  },
+  "R13": {
+    "count": 13,
+    "dist_km": 14.98,
+    "avg_speed": 31.7,
+    "min_speed": 28.3,
+    "max_speed": 34.8,
+    "avg_delay": 1.3,
+    "avg_ratio": 1.02
+  },
+  "R14": {
+    "count": 13,
+    "dist_km": 8.88,
+    "avg_speed": 31.8,
+    "min_speed": 26.4,
+    "max_speed": 37.0,
+    "avg_delay": 0.4,
+    "avg_ratio": 0.99
+  },
+  "R15": {
+    "count": 13,
+    "dist_km": 5.03,
+    "avg_speed": 22.3,
+    "min_speed": 9.2,
+    "max_speed": 58.8,
+    "avg_delay": 4.8,
+    "avg_ratio": 1.17
+  },
+  "R16": {
+    "count": 13,
+    "dist_km": 3.24,
+    "avg_speed": 16.3,
+    "min_speed": 10.3,
+    "max_speed": 37.4,
+    "avg_delay": 0.8,
+    "avg_ratio": 1.08
+  },
+  "R17": {
+    "count": 13,
+    "dist_km": 6.45,
+    "avg_speed": 25.0,
+    "min_speed": 15.8,
+    "max_speed": 36.2,
+    "avg_delay": 2.2,
+    "avg_ratio": 1.08
+  },
+  "R18": {
+    "count": 13,
+    "dist_km": 5.52,
+    "avg_speed": 15.0,
+    "min_speed": 7.3,
+    "max_speed": 35.2,
+    "avg_delay": 9.6,
+    "avg_ratio": 1.33
+  },
+  "R19": {
+    "count": 13,
+    "dist_km": 8.16,
+    "avg_speed": 24.0,
+    "min_speed": 12.4,
+    "max_speed": 49.5,
+    "avg_delay": 3.5,
+    "avg_ratio": 1.1
+  },
+  "R20": {
+    "count": 13,
+    "dist_km": 8.34,
+    "avg_speed": 25.0,
+    "min_speed": 21.3,
+    "max_speed": 35.8,
+    "avg_delay": 0.4,
+    "avg_ratio": 1.02
+  },
+  "R21": {
+    "count": 13,
+    "dist_km": 10.92,
+    "avg_speed": 19.8,
+    "min_speed": 13.6,
+    "max_speed": 37.8,
+    "avg_delay": 2.4,
+    "avg_ratio": 1.13
+  },
+  "R22": {
+    "count": 13,
+    "dist_km": 14.21,
+    "avg_speed": 24.9,
+    "min_speed": 17.7,
+    "max_speed": 37.1,
+    "avg_delay": 5.4,
+    "avg_ratio": 1.08
+  },
+  "R23": {
+    "count": 13,
+    "dist_km": 8.05,
+    "avg_speed": 27.1,
+    "min_speed": 14.2,
+    "max_speed": 79.6,
+    "avg_delay": 5.8,
+    "avg_ratio": 1.18
+  },
+  "R24": {
+    "count": 13,
+    "dist_km": 9.0,
+    "avg_speed": 26.0,
+    "min_speed": 19.1,
+    "max_speed": 79.0,
+    "avg_delay": 3.8,
+    "avg_ratio": 1.15
+  },
+  "R25": {
+    "count": 13,
+    "dist_km": 6.81,
+    "avg_speed": 20.7,
+    "min_speed": 10.3,
+    "max_speed": 41.0,
+    "avg_delay": 4.1,
+    "avg_ratio": 1.16
+  },
+  "R26": {
+    "count": 26,
+    "dist_km": 8.5,
+    "avg_speed": 24.2,
+    "min_speed": 12.4,
+    "max_speed": 34.7,
+    "avg_delay": 8.2,
+    "avg_ratio": 1.53
+  },
+  "R27": {
+    "count": 13,
+    "dist_km": 15.59,
+    "avg_speed": 29.5,
+    "min_speed": 24.7,
+    "max_speed": 38.0,
+    "avg_delay": 1.7,
+    "avg_ratio": 1.01
+  },
+  "R28": {
+    "count": 13,
+    "dist_km": 7.71,
+    "avg_speed": 26.4,
+    "min_speed": 19.5,
+    "max_speed": 37.6,
+    "avg_delay": 2.4,
+    "avg_ratio": 1.05
+  },
+  "R29": {
+    "count": 13,
+    "dist_km": 8.55,
+    "avg_speed": 46.9,
+    "min_speed": 35.2,
+    "max_speed": 50.0,
+    "avg_delay": 0.2,
+    "avg_ratio": 0.33
+  },
+  "R30": {
+    "count": 13,
+    "dist_km": 6.8,
+    "avg_speed": 19.8,
+    "min_speed": 9.0,
+    "max_speed": 52.8,
+    "avg_delay": 7.1,
+    "avg_ratio": 1.33
+  },
+  "R31": {
+    "count": 13,
+    "dist_km": 24.12,
+    "avg_speed": 34.2,
+    "min_speed": 27.0,
+    "max_speed": 72.9,
+    "avg_delay": 3.3,
+    "avg_ratio": 1.04
+  },
+  "R32": {
+    "count": 13,
+    "dist_km": 6.49,
+    "avg_speed": 33.0,
+    "min_speed": 25.5,
+    "max_speed": 79.1,
+    "avg_delay": 1.3,
+    "avg_ratio": 1.07
+  },
+  "R33": {
+    "count": 13,
+    "dist_km": 8.4,
+    "avg_speed": 23.4,
+    "min_speed": 15.4,
+    "max_speed": 37.6,
+    "avg_delay": 1.7,
+    "avg_ratio": 1.04
+  },
+  "R34": {
+    "count": 13,
+    "dist_km": 7.44,
+    "avg_speed": 24.7,
+    "min_speed": 19.2,
+    "max_speed": 36.9,
+    "avg_delay": 1.7,
+    "avg_ratio": 1.04
+  },
+  "R35": {
+    "count": 13,
+    "dist_km": 15.48,
+    "avg_speed": 23.3,
+    "min_speed": 17.7,
+    "max_speed": 35.7,
+    "avg_delay": 5.0,
+    "avg_ratio": 1.16
+  },
+  "R36": {
+    "count": 13,
+    "dist_km": 10.28,
+    "avg_speed": 32.1,
+    "min_speed": 23.6,
+    "max_speed": 49.7,
+    "avg_delay": 5.0,
+    "avg_ratio": 1.11
+  },
+  "R37": {
+    "count": 13,
+    "dist_km": 22.37,
+    "avg_speed": 32.3,
+    "min_speed": 21.2,
+    "max_speed": 80.0,
+    "avg_delay": 11.2,
+    "avg_ratio": 1.26
+  },
+  "R38": {
+    "count": 13,
+    "dist_km": 16.83,
+    "avg_speed": 24.2,
+    "min_speed": 15.7,
+    "max_speed": 43.0,
+    "avg_delay": 11.6,
+    "avg_ratio": 1.24
+  },
+  "R39": {
+    "count": 13,
+    "dist_km": 12.23,
+    "avg_speed": 25.7,
+    "min_speed": 20.2,
+    "max_speed": 38.0,
+    "avg_delay": 1.7,
+    "avg_ratio": 1.03
+  },
+  "R40": {
+    "count": 13,
+    "dist_km": 19.6,
+    "avg_speed": 26.1,
+    "min_speed": 19.3,
+    "max_speed": 55.0,
+    "avg_delay": 3.5,
+    "avg_ratio": 1.05
+  },
+  "R41": {
+    "count": 13,
+    "dist_km": 17.59,
+    "avg_speed": 28.2,
+    "min_speed": 24.7,
+    "max_speed": 34.7,
+    "avg_delay": 1.4,
+    "avg_ratio": 1.01
+  },
+  "R42": {
+    "count": 13,
+    "dist_km": 6.98,
+    "avg_speed": 28.1,
+    "min_speed": 15.3,
+    "max_speed": 79.1,
+    "avg_delay": 3.0,
+    "avg_ratio": 1.13
+  },
+  "R43": {
+    "count": 13,
+    "dist_km": 13.93,
+    "avg_speed": 23.8,
+    "min_speed": 18.6,
+    "max_speed": 36.8,
+    "avg_delay": 4.4,
+    "avg_ratio": 1.13
+  },
+  "R44": {
+    "count": 13,
+    "dist_km": 20.85,
+    "avg_speed": 27.4,
+    "min_speed": 23.0,
+    "max_speed": 35.2,
+    "avg_delay": 3.0,
+    "avg_ratio": 1.06
+  },
+  "R45": {
+    "count": 13,
+    "dist_km": 14.43,
+    "avg_speed": 31.9,
+    "min_speed": 24.9,
+    "max_speed": 56.9,
+    "avg_delay": 0.5,
+    "avg_ratio": 0.98
+  },
+  "R46": {
+    "count": 13,
+    "dist_km": 18.66,
+    "avg_speed": 25.5,
+    "min_speed": 19.2,
+    "max_speed": 37.0,
+    "avg_delay": 7.8,
+    "avg_ratio": 1.13
+  },
+  "R47": {
+    "count": 15,
+    "dist_km": 1.8,
+    "avg_speed": 16.0,
+    "min_speed": 0.0,
+    "max_speed": 36.0,
+    "avg_delay": 0.9,
+    "avg_ratio": 0.98
+  },
+  "R48": {
+    "count": 13,
+    "dist_km": 10.61,
+    "avg_speed": 23.9,
+    "min_speed": 14.6,
+    "max_speed": 37.5,
+    "avg_delay": 5.7,
+    "avg_ratio": 1.13
+  },
+  "R49": {
+    "count": 13,
+    "dist_km": 19.71,
+    "avg_speed": 25.6,
+    "min_speed": 18.0,
+    "max_speed": 36.2,
+    "avg_delay": 6.6,
+    "avg_ratio": 1.11
+  },
+  "R50": {
+    "count": 13,
+    "dist_km": 24.5,
+    "avg_speed": 30.9,
+    "min_speed": 20.8,
+    "max_speed": 78.4,
+    "avg_delay": 6.0,
+    "avg_ratio": 1.08
+  },
+  "R51": {
+    "count": 4,
+    "dist_km": 7.5,
+    "avg_speed": 80.0,
+    "min_speed": 79.1,
+    "max_speed": 81.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R52": {
+    "count": 2,
+    "dist_km": 2.8,
+    "avg_speed": 46.3,
+    "min_speed": 46.3,
+    "max_speed": 46.3,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R53": {
+    "count": 2,
+    "dist_km": 2.8,
+    "avg_speed": 79.6,
+    "min_speed": 79.6,
+    "max_speed": 79.6,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R54": {
+    "count": 2,
+    "dist_km": 2.5,
+    "avg_speed": 77.1,
+    "min_speed": 77.1,
+    "max_speed": 77.1,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R55": {
+    "count": 2,
+    "dist_km": 2.4,
+    "avg_speed": 81.4,
+    "min_speed": 81.4,
+    "max_speed": 81.4,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R56": {
+    "count": 1,
+    "dist_km": 4.2,
+    "avg_speed": 80.0,
+    "min_speed": 80.0,
+    "max_speed": 80.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R57": {
+    "count": 1,
+    "dist_km": 3.8,
+    "avg_speed": 80.9,
+    "min_speed": 80.9,
+    "max_speed": 80.9,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R58": {
+    "count": 1,
+    "dist_km": 3.2,
+    "avg_speed": 20.0,
+    "min_speed": 20.0,
+    "max_speed": 20.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R59": {
+    "count": 1,
+    "dist_km": 3.5,
+    "avg_speed": 20.0,
+    "min_speed": 20.0,
+    "max_speed": 20.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R60": {
+    "count": 2,
+    "dist_km": 3.0,
+    "avg_speed": 82.5,
+    "min_speed": 82.5,
+    "max_speed": 82.5,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R61": {
+    "count": 2,
+    "dist_km": 6.5,
+    "avg_speed": 42.0,
+    "min_speed": 42.0,
+    "max_speed": 42.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R62": {
+    "count": 2,
+    "dist_km": 1.8,
+    "avg_speed": 7.3,
+    "min_speed": 0.0,
+    "max_speed": 14.6,
+    "avg_delay": 2.2,
+    "avg_ratio": 1.24
+  },
+  "R63": {
+    "count": 1,
+    "dist_km": 15.5,
+    "avg_speed": 41.9,
+    "min_speed": 41.9,
+    "max_speed": 41.9,
+    "avg_delay": 0.2,
+    "avg_ratio": 1.01
+  },
+  "R64": {
+    "count": 2,
+    "dist_km": 2.6,
+    "avg_speed": 58.2,
+    "min_speed": 58.2,
+    "max_speed": 58.2,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R65": {
+    "count": 2,
+    "dist_km": 1.5,
+    "avg_speed": 77.1,
+    "min_speed": 77.1,
+    "max_speed": 77.1,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R66": {
+    "count": 2,
+    "dist_km": 2.0,
+    "avg_speed": 5.2,
+    "min_speed": 0.0,
+    "max_speed": 10.5,
+    "avg_delay": 3.7,
+    "avg_ratio": 1.43
+  },
+  "R67": {
+    "count": 2,
+    "dist_km": 1.8,
+    "avg_speed": 75.0,
+    "min_speed": 75.0,
+    "max_speed": 75.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R68": {
+    "count": 2,
+    "dist_km": 1.6,
+    "avg_speed": 6.1,
+    "min_speed": 0.0,
+    "max_speed": 12.2,
+    "avg_delay": 2.5,
+    "avg_ratio": 1.31
+  },
+  "R69": {
+    "count": 2,
+    "dist_km": 2.2,
+    "avg_speed": 70.0,
+    "min_speed": 70.0,
+    "max_speed": 70.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R70": {
+    "count": 2,
+    "dist_km": 1.6,
+    "avg_speed": 20.0,
+    "min_speed": 20.0,
+    "max_speed": 20.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R71": {
+    "count": 2,
+    "dist_km": 2.0,
+    "avg_speed": 81.8,
+    "min_speed": 81.8,
+    "max_speed": 81.8,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R72": {
+    "count": 2,
+    "dist_km": 6.0,
+    "avg_speed": 78.6,
+    "min_speed": 78.6,
+    "max_speed": 78.6,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R73": {
+    "count": 2,
+    "dist_km": 3.0,
+    "avg_speed": 78.8,
+    "min_speed": 78.8,
+    "max_speed": 78.8,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R74": {
+    "count": 2,
+    "dist_km": 2.0,
+    "avg_speed": 70.0,
+    "min_speed": 70.0,
+    "max_speed": 70.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R75": {
+    "count": 4,
+    "dist_km": 6.8,
+    "avg_speed": 43.5,
+    "min_speed": 42.0,
+    "max_speed": 45.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R76": {
+    "count": 4,
+    "dist_km": 3.0,
+    "avg_speed": 16.5,
+    "min_speed": 0.0,
+    "max_speed": 29.0,
+    "avg_delay": 3.0,
+    "avg_ratio": 1.25
+  },
+  "R77": {
+    "count": 3,
+    "dist_km": 4.2,
+    "avg_speed": 47.1,
+    "min_speed": 47.1,
+    "max_speed": 47.1,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R78": {
+    "count": 1,
+    "dist_km": 4.8,
+    "avg_speed": 80.0,
+    "min_speed": 80.0,
+    "max_speed": 80.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R79": {
+    "count": 5,
+    "dist_km": 9.5,
+    "avg_speed": 78.3,
+    "min_speed": 78.0,
+    "max_speed": 78.5,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R80": {
+    "count": 1,
+    "dist_km": 3.5,
+    "avg_speed": 20.0,
+    "min_speed": 20.0,
+    "max_speed": 20.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R81": {
+    "count": 4,
+    "dist_km": 3.2,
+    "avg_speed": 79.2,
+    "min_speed": 78.5,
+    "max_speed": 80.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R82": {
+    "count": 2,
+    "dist_km": 2.4,
+    "avg_speed": 48.0,
+    "min_speed": 48.0,
+    "max_speed": 48.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R83": {
+    "count": 2,
+    "dist_km": 4.5,
+    "avg_speed": 46.3,
+    "min_speed": 46.3,
+    "max_speed": 46.3,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R84": {
+    "count": 2,
+    "dist_km": 1.4,
+    "avg_speed": 80.0,
+    "min_speed": 80.0,
+    "max_speed": 80.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R85": {
+    "count": 2,
+    "dist_km": 3.2,
+    "avg_speed": 31.9,
+    "min_speed": 31.9,
+    "max_speed": 31.9,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R86": {
+    "count": 2,
+    "dist_km": 2.4,
+    "avg_speed": 0.0,
+    "min_speed": 0.0,
+    "max_speed": 0.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 0.0
+  },
+  "R87": {
+    "count": 25,
+    "dist_km": 9.0,
+    "avg_speed": 30.3,
+    "min_speed": 13.9,
+    "max_speed": 40.3,
+    "avg_delay": 7.8,
+    "avg_ratio": 1.65
+  },
+  "R88": {
+    "count": 25,
+    "dist_km": 24.5,
+    "avg_speed": 30.2,
+    "min_speed": 15.9,
+    "max_speed": 43.0,
+    "avg_delay": 19.4,
+    "avg_ratio": 1.55
+  },
+  "R89": {
+    "count": 1,
+    "dist_km": 15.5,
+    "avg_speed": 38.9,
+    "min_speed": 38.9,
+    "max_speed": 38.9,
+    "avg_delay": 1.9,
+    "avg_ratio": 1.09
+  },
+  "R90": {
+    "count": 2,
+    "dist_km": 2.8,
+    "avg_speed": 45.4,
+    "min_speed": 45.4,
+    "max_speed": 45.4,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R91": {
+    "count": 2,
+    "dist_km": 1.2,
+    "avg_speed": 70.0,
+    "min_speed": 70.0,
+    "max_speed": 70.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R92": {
+    "count": 2,
+    "dist_km": 1.8,
+    "avg_speed": 30.0,
+    "min_speed": 30.0,
+    "max_speed": 30.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R93": {
+    "count": 2,
+    "dist_km": 3.8,
+    "avg_speed": 80.0,
+    "min_speed": 80.0,
+    "max_speed": 80.0,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R94": {
+    "count": 2,
+    "dist_km": 2.2,
+    "avg_speed": 35.5,
+    "min_speed": 35.5,
+    "max_speed": 35.5,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R95": {
+    "count": 2,
+    "dist_km": 4.8,
+    "avg_speed": 78.5,
+    "min_speed": 78.5,
+    "max_speed": 78.5,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R96": {
+    "count": 4,
+    "dist_km": 4.5,
+    "avg_speed": 79.4,
+    "min_speed": 78.0,
+    "max_speed": 80.8,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R97": {
+    "count": 2,
+    "dist_km": 8.0,
+    "avg_speed": 81.3,
+    "min_speed": 81.3,
+    "max_speed": 81.3,
+    "avg_delay": 0.0,
+    "avg_ratio": 1.0
+  },
+  "R98": {
+    "count": 25,
+    "dist_km": 14.2,
+    "avg_speed": 30.0,
+    "min_speed": 7.5,
+    "max_speed": 80.3,
+    "avg_delay": 12.4,
+    "avg_ratio": 1.56
+  }
+};

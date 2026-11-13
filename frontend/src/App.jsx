@@ -27,8 +27,11 @@ export default function App() {
       </main>
 
       <footer className="border-t border-slate-200 bg-white mt-auto py-5 px-4">
-        <div className="max-w-6xl mx-auto text-center space-y-1">
-          <p className="text-sm font-medium text-slate-700">Dhaka Traffic Prediction System</p>
+        <div className="max-w-6xl mx-auto text-center space-y-1.5">
+          <div className="flex items-center justify-center gap-2">
+            <img src="/logo/logo.svg" alt="TrafficPulse Logo" className="w-5 h-5 rounded-md object-contain shadow-2xs" />
+            <p className="text-sm font-semibold text-slate-800">TrafficPulse</p>
+          </div>
           <p className="text-xs text-slate-400">
             OSM Road Network · Google Maps Routes API · OpenWeatherMap · React · Node.js · Leaflet
           </p>

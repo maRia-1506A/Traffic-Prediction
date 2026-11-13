@@ -129,7 +129,10 @@ export const NODE_COORDINATES = {
   'Beribadh': [23.8200, 90.3380],
   'Eastern Housing': [23.8250, 90.3450],
   'Sony Cinema Hall': [23.7980, 90.3560],
-  'Paragram': [23.8800, 90.3180]
+  'Paragram': [23.8800, 90.3180],
+  'Kalyanpur': [23.7818, 90.3592],
+  'Postogola': [23.6920, 90.4350],
+  'Karwan Bazar': [23.7516, 90.3934]
 };
 
 // Strategic Dhaka Congestion Bypass Points & Flyovers
@@ -213,8 +216,59 @@ export const OFFICIAL_ROUTES_RAW = [
   { id: "R50", path: "Gulshan 2 -> Notun Bazar -> Kuril -> Uttara -> Gazipur" }
 ];
 
-export function buildOfficialRoutes() {
-  return OFFICIAL_ROUTES_RAW.map(item => {
+export const EXTENDED_ROUTES_RAW = [
+  { id: "R51", path: "Airport -> Banani" },
+  { id: "R52", path: "Asad Gate -> Farmgate" },
+  { id: "R53", path: "Badda -> Rampura Bridge" },
+  { id: "R54", path: "Bijoy Sarani -> Mohakhali" },
+  { id: "R55", path: "Dhanmondi 27 -> Science Lab" },
+  { id: "R56", path: "ECB Chattor -> Airport" },
+  { id: "R57", path: "ECB Chattor -> Banani" },
+  { id: "R58", path: "ECB Chattor -> Kuril" },
+  { id: "R59", path: "ECB Chattor -> Mirpur 12" },
+  { id: "R60", path: "Farmgate -> Shahbagh" },
+  { id: "R61", path: "Gabtoli -> Dhanmondi 27" },
+  { id: "R62", path: "Gabtoli -> Kalyanpur" },
+  { id: "R63", path: "Gabtoli -> Savar" },
+  { id: "R64", path: "Gulistan -> Sadarghat" },
+  { id: "R65", path: "Gulshan 1 -> Badda Link Road" },
+  { id: "R66", path: "Gulshan 1 -> Mohakhali" },
+  { id: "R67", path: "Gulshan 2 -> Gulshan 1" },
+  { id: "R68", path: "Jatrabari -> Sayedabad" },
+  { id: "R69", path: "Kakrail -> Motijheel" },
+  { id: "R70", path: "Kalyanpur -> Shyamoli" },
+  { id: "R71", path: "Karwan Bazar -> Shahbagh" },
+  { id: "R72", path: "Kuril -> Mohakhali" },
+  { id: "R73", path: "Kuril -> Notun Bazar" },
+  { id: "R74", path: "Malibagh -> Kakrail" },
+  { id: "R75", path: "Mirpur 1 -> Dhanmondi 27" },
+  { id: "R76", path: "Mirpur 1 -> Gabtoli" },
+  { id: "R77", path: "Mirpur 10 -> Agargaon" },
+  { id: "R78", path: "Mirpur 10 -> ECB Chattor" },
+  { id: "R79", path: "Mirpur 10 -> Karwan Bazar" },
+  { id: "R80", path: "Mirpur 12 -> ECB Chattor" },
+  { id: "R81", path: "Mirpur 12 -> Mirpur 10" },
+  { id: "R82", path: "Mohammadpur -> Dhanmondi 27" },
+  { id: "R83", path: "Mohammadpur -> Farmgate" },
+  { id: "R84", path: "Motijheel -> Gulistan" },
+  { id: "R85", path: "Postogola -> Jatrabari" },
+  { id: "R86", path: "Rampura -> Malibagh" },
+  { id: "R87", path: "Savar -> Ashulia" },
+  { id: "R88", path: "Savar -> Dhanmondi" },
+  { id: "R89", path: "Savar -> Gabtoli" },
+  { id: "R90", path: "Sayedabad -> Motijheel" },
+  { id: "R91", path: "Science Lab -> New Market" },
+  { id: "R92", path: "Science Lab -> Shahbagh" },
+  { id: "R93", path: "Shahbagh -> Motijheel" },
+  { id: "R94", path: "Shyamoli -> Asad Gate" },
+  { id: "R95", path: "Tongi -> Uttara" },
+  { id: "R96", path: "Uttara -> Airport" },
+  { id: "R97", path: "Uttara -> Kuril" },
+  { id: "R98", path: "Uttara -> Mohakhali" }
+];
+
+function buildRoutesList(rawList, isOfficial = true) {
+  return rawList.map(item => {
     const nodeNames = item.path.split("->").map(s => s.trim()).filter(Boolean);
     const waypoints = nodeNames.map(name => {
       const coords = NODE_COORDINATES[name] || [23.8069, 90.3687];
@@ -245,8 +299,20 @@ export function buildOfficialRoutes() {
       road_length_km: totalDist,
       free_flow_time_min: freeFlowTimeMin,
       road_type: totalDist > 15 ? "Trunk / Highway" : totalDist > 7 ? "Primary Arterial" : "Secondary Urban",
-      num_lanes: 4
+      num_lanes: 4,
+      is_official: isOfficial,
+      category: isOfficial ? "Primary Corridor" : "Extended Historical Corridor"
     };
   });
+}
+
+export function buildOfficialRoutes() {
+  return buildRoutesList(OFFICIAL_ROUTES_RAW, true);
+}
+
+export function buildAllRoutes() {
+  const official = buildRoutesList(OFFICIAL_ROUTES_RAW, true);
+  const extended = buildRoutesList(EXTENDED_ROUTES_RAW, false);
+  return [...official, ...extended];
 }
 
