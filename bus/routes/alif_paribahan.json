@@ -1,0 +1,37 @@
+{
+  "id": "alif_paribahan",
+  "name": "Alif Paribahan",
+  "name_bn": "আলিফ পরিবহন",
+  "route_code": "ALF-01",
+  "type": "Semi-Seating",
+  "origin": "Rampura / Badda Link Road",
+  "destination": "Mirpur 10 / Mirpur 1",
+  "stoppages": [
+    "Rampura Bridge",
+    "Badda Link Road",
+    "Uttar Badda",
+    "Notun Bazar",
+    "Kuril Bishwa Road",
+    "Kakoli",
+    "Banani",
+    "Mohakhali",
+    "Jahangir Gate",
+    "Bijoy Sarani",
+    "Agargaon",
+    "Shewrapara",
+    "Kazipara",
+    "Mirpur 10",
+    "Mirpur 1"
+  ],
+  "corridors_covered": [
+    "R04",
+    "R08",
+    "R31"
+  ],
+  "fare_min_bdt": 15,
+  "fare_max_bdt": 40,
+  "first_bus": "05:45 AM",
+  "last_bus": "11:00 PM",
+  "frequency_min": 7,
+  "operator": "Alif Paribahan Ltd."
+}

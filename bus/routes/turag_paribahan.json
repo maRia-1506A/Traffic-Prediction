@@ -1,0 +1,35 @@
+{
+  "id": "turag_paribahan",
+  "name": "Turag Paribahan",
+  "name_bn": "তুরাগ পরিবহন",
+  "route_code": "TR-01",
+  "type": "Semi-Seating",
+  "origin": "Jatrabari",
+  "destination": "Tongi Station Road",
+  "stoppages": [
+    "Jatrabari",
+    "Sayedabad",
+    "Golapbagh",
+    "Mugda",
+    "Malibagh",
+    "Rampura",
+    "Badda Link Road",
+    "Notun Bazar",
+    "Kuril Bishwa Road",
+    "Airport",
+    "Uttara",
+    "Abdullahpur",
+    "Tongi Station Road"
+  ],
+  "corridors_covered": [
+    "R08",
+    "R09",
+    "R37"
+  ],
+  "fare_min_bdt": 10,
+  "fare_max_bdt": 50,
+  "first_bus": "06:00 AM",
+  "last_bus": "11:00 PM",
+  "frequency_min": 6,
+  "operator": "Turag Paribahan Ltd."
+}

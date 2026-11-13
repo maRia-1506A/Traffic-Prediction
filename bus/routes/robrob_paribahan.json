@@ -1,0 +1,33 @@
+{
+  "id": "robrob_paribahan",
+  "name": "Robrob Paribahan",
+  "name_bn": "রবরব পরিবহন",
+  "route_code": "RBR-01",
+  "type": "Semi-Seating",
+  "origin": "Badda / Notun Bazar",
+  "destination": "Mirpur 10 / Mohammadpur",
+  "stoppages": [
+    "Badda Link Road",
+    "Uttar Badda",
+    "Notun Bazar",
+    "Kuril Bishwa Road",
+    "ECB Chattor",
+    "Kalshi",
+    "Purobi",
+    "Mirpur 10",
+    "Agargaon",
+    "Shia Mosque",
+    "Mohammadpur"
+  ],
+  "corridors_covered": [
+    "R08",
+    "R31",
+    "R02"
+  ],
+  "fare_min_bdt": 15,
+  "fare_max_bdt": 40,
+  "first_bus": "06:00 AM",
+  "last_bus": "10:30 PM",
+  "frequency_min": 8,
+  "operator": "Robrob Transport Co."
+}
