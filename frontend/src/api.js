@@ -371,6 +371,19 @@ export async function predictJourneyApi(payload) {
   return predictJourneyTraffic(payload);
 }
 
+export async function fetchBusesBetween(from, to) {
+  try {
+    const res = await fetch(`${API_BASE}/buses?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+    if (res.ok) {
+      const json = await res.json();
+      if (json && json.success) return json;
+    }
+  } catch (err) {
+    console.warn('[API] /api/buses fetch error:', err.message);
+  }
+  return null;
+}
+
 export async function measureExactRoadRoute(origin, destination) {
   try {
     const res = await fetch(`${API_BASE}/measure-route`, {

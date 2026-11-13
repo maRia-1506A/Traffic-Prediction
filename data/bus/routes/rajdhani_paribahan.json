@@ -1,0 +1,38 @@
+{
+  "id": "rajdhani_paribahan",
+  "name": "Rajdhani Paribahan",
+  "name_bn": "রাজধানী পরিবহন",
+  "route_code": "RJD-01",
+  "type": "Local / Semi-Seating",
+  "origin": "Savar / Baipail",
+  "destination": "Mirpur 10 / Mirpur 14",
+  "stoppages": [
+    "Baipail",
+    "Zirabo",
+    "Nabinagar",
+    "Palli Bidyut",
+    "C&B Mor",
+    "Radio Colony",
+    "Savar Bus Stand",
+    "Hemayetpur",
+    "Aminbazar",
+    "Gabtoli",
+    "Technical",
+    "Mirpur 1",
+    "Mirpur 2",
+    "Mirpur 10",
+    "Mirpur 14"
+  ],
+  "corridors_covered": [
+    "R02",
+    "R27",
+    "R31",
+    "R35"
+  ],
+  "fare_min_bdt": 15,
+  "fare_max_bdt": 45,
+  "first_bus": "05:30 AM",
+  "last_bus": "11:00 PM",
+  "frequency_min": 5,
+  "operator": "Rajdhani Transport Owners Association"
+}

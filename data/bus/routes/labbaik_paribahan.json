@@ -1,0 +1,37 @@
+{
+  "id": "labbaik_paribahan",
+  "name": "Labbaik Paribahan",
+  "name_bn": "লাব্বাইক পরিবহন",
+  "route_code": "LB-01",
+  "type": "Semi-Seating",
+  "origin": "Savar C&B Mor",
+  "destination": "Sayedabad",
+  "stoppages": [
+    "Savar C&B Mor",
+    "Savar Bus Stand",
+    "Hemayetpur",
+    "Aminbazar",
+    "Gabtoli",
+    "Technical",
+    "Kallyanpur",
+    "Shyamoli",
+    "Asadgate",
+    "Science Lab",
+    "Shahbagh",
+    "Matsya Bhaban",
+    "Gulisthan",
+    "Motijheel",
+    "Sayedabad"
+  ],
+  "corridors_covered": [
+    "R02",
+    "R27",
+    "R05"
+  ],
+  "fare_min_bdt": 10,
+  "fare_max_bdt": 50,
+  "first_bus": "06:00 AM",
+  "last_bus": "10:30 PM",
+  "frequency_min": 7,
+  "operator": "Labbaik Transport"
+}

@@ -1,0 +1,34 @@
+{
+  "id": "manjil_paribahan",
+  "name": "Manjil Express",
+  "name_bn": "মঞ্জিল এক্সপ্রেস",
+  "route_code": "MN-01",
+  "type": "Semi-Seating",
+  "origin": "Gabtoli",
+  "destination": "Kanchpur",
+  "stoppages": [
+    "Gabtoli",
+    "Technical",
+    "Kallyanpur",
+    "Shyamoli",
+    "Asadgate",
+    "Science Lab",
+    "Shahbagh",
+    "Gulisthan",
+    "Motijheel",
+    "Sayedabad",
+    "Jatrabari",
+    "Signboard",
+    "Kanchpur"
+  ],
+  "corridors_covered": [
+    "R05",
+    "R44"
+  ],
+  "fare_min_bdt": 10,
+  "fare_max_bdt": 50,
+  "first_bus": "06:00 AM",
+  "last_bus": "10:30 PM",
+  "frequency_min": 8,
+  "operator": "Manjil Transport Co."
+}

@@ -1,0 +1,33 @@
+{
+  "id": "taranga_plus",
+  "name": "Taranga Plus",
+  "name_bn": "তরঙ্গ প্লাস",
+  "route_code": "TRG-01",
+  "type": "Semi-Seating",
+  "origin": "Mohammadpur",
+  "destination": "Kamalapur / Sayedabad",
+  "stoppages": [
+    "Mohammadpur Bus Stand",
+    "Shankar",
+    "Jigatola",
+    "Dhanmondi",
+    "Science Lab",
+    "Bata Signal",
+    "Shahbagh",
+    "Press Club",
+    "Paltan",
+    "Motijheel",
+    "Kamalapur",
+    "Sayedabad"
+  ],
+  "corridors_covered": [
+    "R05",
+    "R44"
+  ],
+  "fare_min_bdt": 10,
+  "fare_max_bdt": 35,
+  "first_bus": "06:00 AM",
+  "last_bus": "10:30 PM",
+  "frequency_min": 7,
+  "operator": "Taranga Transport Ltd."
+}

@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
@@ -17,6 +18,7 @@ import {
 } from './trafficService.js';
 import { NODE_COORDINATES, DHAKA_BYPASS_WAYPOINTS, haversineKm } from './routesConfig.js';
 import { buildOsmRouteGeometry } from './osmRouter.js';
+import { getAllBuses, getBusById, getBusStops, findBusesBetween } from './busService.js';
 
 // Resilient compression import (safe if module not present)
 let compression = null;
@@ -154,8 +156,18 @@ app.get('/api/history', (req, res) => {
     const rawLimit = parseInt(req.query.limit, 10);
     const search = req.query.search ? req.query.search.toLowerCase() : '';
     const level = req.query.level;
+    const archiveFile = req.query.archive || req.query.file || null;
+    const fromDate = req.query.from_date || req.query.start_date || null;
+    const toDate = req.query.to_date || req.query.end_date || null;
 
-    let records = loadTrafficData();
+    let records = loadTrafficData(archiveFile);
+
+    if (fromDate) {
+      records = records.filter(r => String(r.timestamp || '') >= fromDate);
+    }
+    if (toDate) {
+      records = records.filter(r => String(r.timestamp || '') <= toDate + ' 23:59');
+    }
 
     if (level && level !== 'ALL') {
       records = records.filter(r => (r.traffic_level || '').toUpperCase() === level.toUpperCase());
@@ -184,6 +196,26 @@ app.get('/api/history', (req, res) => {
       totalPages: isAll ? 1 : Math.ceil(total / limit),
       data: paginated
     });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 5.0 List Available Historical CSV Datasets & Archives
+app.get('/api/archives', (req, res) => {
+  try {
+    const dataDir = path.resolve(__dirname, '../data');
+    const files = fs.readdirSync(dataDir).filter(f => f.endsWith('.csv'));
+    const archives = files.map(filename => {
+      const filePath = path.join(dataDir, filename);
+      const stat = fs.statSync(filePath);
+      return {
+        filename,
+        size_mb: Number((stat.size / (1024 * 1024)).toFixed(2)),
+        modified: stat.mtime
+      };
+    });
+    res.json({ success: true, count: archives.length, archives });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
@@ -427,6 +459,42 @@ app.get('/api/corridors/osm-overlay', (req, res) => {
   try {
     const corridors = getMonitoredCorridorsOsmOverlay();
     res.json({ success: true, count: corridors.length, corridors });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// 8c. Route-Wise Bus Network API (Dhaka Metropolitan Transit & DTCA Permitted Services)
+app.get('/api/buses', (req, res) => {
+  try {
+    const { from, to, ...rest } = req.query || {};
+    if (from && to) {
+      const matchResult = findBusesBetween(from, to);
+      return res.json({ success: true, ...matchResult });
+    }
+    const buses = getAllBuses(rest);
+    res.json({ success: true, count: buses.length, data: buses });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/buses/stops', (req, res) => {
+  try {
+    const stops = getBusStops();
+    res.json({ success: true, count: stops.length, data: stops });
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+app.get('/api/buses/:id', (req, res) => {
+  try {
+    const bus = getBusById(req.params.id);
+    if (!bus) {
+      return res.status(404).json({ success: false, error: `Bus service '${req.params.id}' not found` });
+    }
+    res.json({ success: true, data: bus });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

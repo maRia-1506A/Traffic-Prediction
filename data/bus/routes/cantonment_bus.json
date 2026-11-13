@@ -1,0 +1,32 @@
+{
+  "id": "cantonment_bus",
+  "name": "Cantonment Bus Service (CBS)",
+  "name_bn": "ক্যান্টনমেন্ট বাস সার্ভিস",
+  "route_code": "CBS-01",
+  "type": "Special Cantonment Pass",
+  "origin": "Mirpur 14",
+  "destination": "Kakoli / Banani",
+  "stoppages": [
+    "Mirpur 14",
+    "Kochukhet",
+    "Sainik Club",
+    "Matikata",
+    "ECB Chattor",
+    "Garrison Cinema",
+    "Adamjee College",
+    "Navy HQ",
+    "Chairmanbari",
+    "Kakoli",
+    "Banani"
+  ],
+  "corridors_covered": [
+    "R01",
+    "R09"
+  ],
+  "fare_min_bdt": 10,
+  "fare_max_bdt": 25,
+  "first_bus": "06:00 AM",
+  "last_bus": "10:00 PM",
+  "frequency_min": 8,
+  "operator": "Dhaka Cantonment Board"
+}

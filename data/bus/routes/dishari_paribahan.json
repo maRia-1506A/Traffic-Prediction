@@ -1,0 +1,35 @@
+{
+  "id": "dishari_paribahan",
+  "name": "Dishari Paribahan",
+  "name_bn": "দিশারী পরিবহন",
+  "route_code": "DS-01",
+  "type": "Local / Semi-Seating",
+  "origin": "Mirpur 1",
+  "destination": "Gulisthan / Sadarghat",
+  "stoppages": [
+    "Mirpur 1",
+    "Technical",
+    "Kallyanpur",
+    "Shyamoli",
+    "Asadgate",
+    "Dhanmondi 27",
+    "Kalabagan",
+    "Science Lab",
+    "New Market",
+    "Nilkhet",
+    "Azimpur",
+    "Lalbagh",
+    "Chawkbazar",
+    "Sadarghat"
+  ],
+  "corridors_covered": [
+    "R05",
+    "R44"
+  ],
+  "fare_min_bdt": 10,
+  "fare_max_bdt": 35,
+  "first_bus": "06:00 AM",
+  "last_bus": "10:30 PM",
+  "frequency_min": 5,
+  "operator": "Dishari Paribahan"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "tanjil_paribahan",
+  "name": "Tanjil Paribahan",
+  "name_bn": "তানজিল পরিবহন",
+  "route_code": "TJ-01",
+  "type": "Semi-Seating",
+  "origin": "Mirpur 1",
+  "destination": "Jatrabari / Sayedabad",
+  "stoppages": [
+    "Mirpur 1",
+    "Technical",
+    "Kallyanpur",
+    "Shyamoli",
+    "Asadgate",
+    "Science Lab",
+    "Shahbagh",
+    "Gulisthan",
+    "Motijheel",
+    "Sayedabad",
+    "Jatrabari"
+  ],
+  "corridors_covered": [
+    "R05",
+    "R44"
+  ],
+  "fare_min_bdt": 10,
+  "fare_max_bdt": 40,
+  "first_bus": "06:00 AM",
+  "last_bus": "11:00 PM",
+  "frequency_min": 6,
+  "operator": "Tanjil Transport Co."
+}

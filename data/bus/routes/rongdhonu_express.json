@@ -1,0 +1,29 @@
+{
+  "id": "rongdhonu_express",
+  "name": "Rongdhonu Express (300ft Purbachal)",
+  "name_bn": "রংধনু এক্সপ্রেস (৩০০ ফিট পূর্বাচল)",
+  "route_code": "RD-300",
+  "type": "Expressway Shuttle",
+  "origin": "Kuril Bishwa Road Flyover",
+  "destination": "Kanchan Bridge (Purbachal)",
+  "stoppages": [
+    "Kuril Bishwa Road",
+    "Jagannathpur",
+    "International Convention City Bashundhara (ICCB)",
+    "300ft Toll Plaza",
+    "Purbachal Sector 1",
+    "Purbachal Sector 4",
+    "Purbachal Club",
+    "Kanchan Bridge"
+  ],
+  "corridors_covered": [
+    "R07",
+    "R50"
+  ],
+  "fare_min_bdt": 20,
+  "fare_max_bdt": 50,
+  "first_bus": "06:00 AM",
+  "last_bus": "10:30 PM",
+  "frequency_min": 10,
+  "operator": "Rongdhonu Group & BRTC"
+}

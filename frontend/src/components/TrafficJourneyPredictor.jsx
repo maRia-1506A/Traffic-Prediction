@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ALL_DHAKA_LOCATIONS } from '../utils/journeyPredictor.js';
-import { predictJourneyApi } from '../api.js';
+import { predictJourneyApi, fetchBusesBetween } from '../api.js';
 import JourneyRouteMap from './JourneyRouteMap.jsx';
+import TransitRouteMapDiagram from './TransitRouteMapDiagram.jsx';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const getDayName = (dateStr) => {
@@ -319,7 +320,18 @@ export default function TrafficJourneyPredictor() {
         from: fromLocation,
         to:   toLocation,
       });
-      setResult(data);
+
+      let busTransitData = data?.bus_transit;
+      if (!busTransitData || !busTransitData.buses) {
+        try {
+          const busRes = await fetchBusesBetween(fromLocation, toLocation);
+          if (busRes) {
+            busTransitData = busRes;
+          }
+        } catch (_) {}
+      }
+
+      setResult({ ...data, bus_transit: busTransitData });
     } catch (err) {
       setError('Could not get prediction. Please check if the server is running.');
     } finally {
@@ -928,6 +940,13 @@ export default function TrafficJourneyPredictor() {
                   )}
                 </>
               )}
+
+              {/* ── Transit Route Map Diagram ── */}
+              <TransitRouteMapDiagram
+                busTransit={result.bus_transit}
+                fromLocation={result.from || fromLocation}
+                toLocation={result.to || toLocation}
+              />
             </div>
         </div>
       )}

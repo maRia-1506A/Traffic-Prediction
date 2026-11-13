@@ -32,6 +32,16 @@ const NAV_ITEMS = [
     ),
   },
   {
+    id: 'buses',
+    label: 'Bus Routes',
+    icon: (
+      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+          d="M8 7h8m-8 4h8m-8 4h3m4 0h1M5 3h14a2 2 0 012 2v13a2 2 0 01-2 2h-1v2a1 1 0 01-1 1h-2a1 1 0 01-1-1v-2H9v2a1 1 0 01-1 1H6a1 1 0 01-1-1v-2H4a2 2 0 01-2-2V5a2 2 0 012-2z" />
+      </svg>
+    ),
+  },
+  {
     id: 'about',
     label: 'About',
     icon: (

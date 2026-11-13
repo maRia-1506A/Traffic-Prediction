@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import { buildOfficialRoutes, buildAllRoutes, DHAKA_BYPASS_WAYPOINTS, haversineKm, NODE_COORDINATES, OFFICIAL_ROUTES_RAW } from './routesConfig.js';
 import { googleRoutesClient, openWeatherClient, wazeClient } from './apiClients.js';
 import { buildOsmRouteGeometry, decodeEncodedPolyline, findRouteCheckpoints, segmentPolylineWithOsmNames } from './osmRouter.js';
+import { findBusesBetween } from './busService.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,19 +30,20 @@ let cachedGeoSummary = null;
 const journeyPredictionCache = new Map();
 const JOURNEY_PREDICTION_TTL_MS = 3 * 60 * 1000; // 3 min cache for identical queries
 
-// Parse traffic_data.csv
-export function loadTrafficData() {
-  if (!fs.existsSync(CSV_PATH)) {
+// Parse traffic_data.csv (or optional custom archive CSV)
+export function loadTrafficData(customFilename = null) {
+  const targetPath = customFilename ? path.join(SERVER_DATA_DIR, customFilename) : CSV_PATH;
+  if (!fs.existsSync(targetPath)) {
     return [];
   }
 
   try {
-    const stats = fs.statSync(CSV_PATH);
-    if (lastCsvMtime && stats.mtimeMs === lastCsvMtime && cachedHistory.length > 0) {
+    const stats = fs.statSync(targetPath);
+    if (!customFilename && lastCsvMtime && stats.mtimeMs === lastCsvMtime && cachedHistory.length > 0) {
       return cachedHistory;
     }
 
-    const fileContent = fs.readFileSync(CSV_PATH, 'utf-8');
+    const fileContent = fs.readFileSync(targetPath, 'utf-8');
     const lines = fileContent.split(/\r?\n/).filter(line => line.trim().length > 0);
     if (lines.length < 2) return [];
 
@@ -1420,7 +1422,8 @@ export async function predictJourneyService({ date, day, time, from, to }) {
     },
     has_alternative: alternativeRoutes.length > 0,
     alternative_route: bestAlt,
-    alternative_routes: alternativeRoutes
+    alternative_routes: alternativeRoutes,
+    bus_transit: findBusesBetween(fTrim, tTrim)
   };
 
   journeyPredictionCache.set(cacheKey, { timestamp: Date.now(), data: finalResult });

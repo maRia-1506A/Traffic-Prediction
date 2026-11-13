@@ -1,0 +1,39 @@
+{
+  "id": "projapoti_paribahan",
+  "name": "Projapoti Paribahan",
+  "name_bn": "প্রজাপতি পরিবহন",
+  "route_code": "PJ-01",
+  "type": "Semi-Seating",
+  "origin": "Mohammadpur",
+  "destination": "Abdullahpur (Uttara)",
+  "stoppages": [
+    "Mohammadpur Bus Stand",
+    "Shia Mosque",
+    "Ring Road",
+    "Shyamoli",
+    "Agargaon",
+    "Shewrapara",
+    "Kazipara",
+    "Mirpur 10",
+    "Purobi",
+    "Kalshi",
+    "ECB Chattor",
+    "MES",
+    "Airport",
+    "Jashimuddin",
+    "Azampur",
+    "House Building",
+    "Abdullahpur"
+  ],
+  "corridors_covered": [
+    "R01",
+    "R06",
+    "R45"
+  ],
+  "fare_min_bdt": 10,
+  "fare_max_bdt": 45,
+  "first_bus": "06:00 AM",
+  "last_bus": "11:00 PM",
+  "frequency_min": 7,
+  "operator": "Projapoti Transport Co."
+}

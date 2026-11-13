@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import TrafficJourneyPredictor from './components/TrafficJourneyPredictor';
 import ExploreMap from './components/ExploreMap';
 import TrafficInsights from './components/TrafficInsights';
+import DhakaBusDirectory from './components/DhakaBusDirectory';
 import AboutPage from './components/AboutPage';
 
 export default function App() {
@@ -13,6 +14,7 @@ export default function App() {
       case 'home':     return <TrafficJourneyPredictor />;
       case 'map':      return <ExploreMap />;
       case 'insights': return <TrafficInsights />;
+      case 'buses':    return <DhakaBusDirectory />;
       case 'about':    return <AboutPage />;
       default:         return <TrafficJourneyPredictor />;
     }

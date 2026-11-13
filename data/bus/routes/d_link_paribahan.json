@@ -1,0 +1,31 @@
+{
+  "id": "d_link_paribahan",
+  "name": "D-Link Paribahan",
+  "name_bn": "ডি-লিংক পরিবহন",
+  "route_code": "DLK-01",
+  "type": "Semi-Seating",
+  "origin": "Savar Bus Stand",
+  "destination": "Mirpur 14",
+  "stoppages": [
+    "Savar Bus Stand",
+    "Radio Colony",
+    "Hemayetpur",
+    "Aminbazar",
+    "Gabtoli",
+    "Technical",
+    "Mirpur 1",
+    "Mirpur 2",
+    "Mirpur 10",
+    "Mirpur 14"
+  ],
+  "corridors_covered": [
+    "R02",
+    "R27"
+  ],
+  "fare_min_bdt": 15,
+  "fare_max_bdt": 40,
+  "first_bus": "06:00 AM",
+  "last_bus": "10:30 PM",
+  "frequency_min": 8,
+  "operator": "D-Link Transport Co."
+}
