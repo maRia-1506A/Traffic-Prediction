@@ -6,36 +6,36 @@ import { API_BASE, fetchWithTimeout } from '../api.js';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const TRAFFIC_COLORS = {
-  High:        '#dc2626', // Red
-  Medium:      '#eab308', // Yellow
-  Low:         '#16a34a', // Green
-  Normal:      '#16a34a',
-  NORMAL:      '#16a34a',
-  Moderate:    '#eab308',
-  MODERATE:    '#eab308',
-  SLOW:        '#eab308',
-  Heavy:       '#ea580c',
-  HEAVY:       '#ea580c',
-  Severe:      '#dc2626',
-  SEVERE:      '#dc2626',
+  High: '#dc2626', // Red
+  Medium: '#eab308', // Yellow
+  Low: '#16a34a', // Green
+  Normal: '#16a34a',
+  NORMAL: '#16a34a',
+  Moderate: '#eab308',
+  MODERATE: '#eab308',
+  SLOW: '#eab308',
+  Heavy: '#ea580c',
+  HEAVY: '#ea580c',
+  Severe: '#dc2626',
+  SEVERE: '#dc2626',
   TRAFFIC_JAM: '#dc2626',
 };
 
 const TRAFFIC_LABELS = {
-  Severe:   'Severe Congestion (Route-level)',
-  Heavy:    'Heavy Congestion (Route-level)',
+  Severe: 'Severe Congestion (Route-level)',
+  Heavy: 'Heavy Congestion (Route-level)',
   Moderate: 'Moderate Congestion (Route-level)',
-  Normal:   'Normal Flow (Route-level)',
-  High:     'High Congestion (Route-level)',
-  Medium:   'Moderate Congestion (Route-level)',
-  Low:      'Low Congestion (Route-level)',
+  Normal: 'Normal Flow (Route-level)',
+  High: 'High Congestion (Route-level)',
+  Medium: 'Moderate Congestion (Route-level)',
+  Low: 'Low Congestion (Route-level)',
 };
 
 const PRIMARY_ROUTE_COLOR = '#2563eb'; // Blue
 
 const ALT_STYLES = [
-  { color: '#7c3aed', dash: '10, 6',       name: 'Purple', label: 'Alt 1' }, // Alternative 1: Purple
-  { color: '#0d9488', dash: '6, 6',        name: 'Teal',   label: 'Alt 2' }, // Alternative 2: Teal
+  { color: '#7c3aed', dash: '10, 6', name: 'Purple', label: 'Alt 1' }, // Alternative 1: Purple
+  { color: '#0d9488', dash: '6, 6', name: 'Teal', label: 'Alt 2' }, // Alternative 2: Teal
   { color: '#ea580c', dash: '14, 5, 3, 5', name: 'Orange', label: 'Alt 3' }, // Alternative 3: Orange
 ];
 
@@ -140,7 +140,7 @@ async function fetchClientRoadCurve(waypoints) {
       clientOsrmCache.set(key, coords);
       return coords;
     }
-  } catch (_) {}
+  } catch (_) { }
   return null;
 }
 
@@ -159,16 +159,16 @@ export default function JourneyRouteMap({
   selectedDate = '',
   selectedTime = '',
 }) {
-  const containerRef    = useRef(null);
-  const mapRef          = useRef(null);
-  const altPanelRef     = useRef(null);
+  const containerRef = useRef(null);
+  const mapRef = useRef(null);
+  const altPanelRef = useRef(null);
   const corridorLayerRef = useRef(null);
-  const altLayerRef     = useRef(null);
-  const routeLayerRef   = useRef(null);
+  const altLayerRef = useRef(null);
+  const routeLayerRef = useRef(null);
 
-  const [altMenuOpen, setAltMenuOpen]       = useState(false);
-  const [showCorridors, setShowCorridors]   = useState(true);
-  const [corridorsData, setCorridorsData]   = useState(null);
+  const [altMenuOpen, setAltMenuOpen] = useState(false);
+  const [showCorridors, setShowCorridors] = useState(true);
+  const [corridorsData, setCorridorsData] = useState(null);
   const [refinedRoadMap, setRefinedRoadMap] = useState({});
   const [mobileLegendOpen, setMobileLegendOpen] = useState(false);
 
@@ -183,8 +183,8 @@ export default function JourneyRouteMap({
     return alternativeRoutes?.length
       ? alternativeRoutes.slice(0, 3)
       : alternativeRoute
-      ? [alternativeRoute]
-      : [];
+        ? [alternativeRoute]
+        : [];
   }, [alternativeRoutes, alternativeRoute]);
 
   // Track route signature and already-refined keys to prevent infinite re-fetching loops
@@ -301,9 +301,9 @@ export default function JourneyRouteMap({
     map.createPane('selectedRoutePane').style.zIndex = 440;
 
     corridorLayerRef.current = L.layerGroup().addTo(map);
-    altLayerRef.current      = L.layerGroup().addTo(map);
-    routeLayerRef.current    = L.layerGroup().addTo(map);
-    mapRef.current           = map;
+    altLayerRef.current = L.layerGroup().addTo(map);
+    routeLayerRef.current = L.layerGroup().addTo(map);
+    mapRef.current = map;
 
     return () => {
       map.remove();
@@ -321,7 +321,7 @@ export default function JourneyRouteMap({
           setCorridorsData(json.corridors);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => { active = false; };
   }, []);
 
@@ -405,7 +405,7 @@ export default function JourneyRouteMap({
     if (!showAlternative || resolvedAlts.length === 0) return;
 
     const origCoords = primaryRoute?.origin_coords || NODE_COORDINATES[fromLocation] || [23.8069, 90.3687];
-    const destCoords = primaryRoute?.dest_coords   || NODE_COORDINATES[toLocation]   || [23.7570, 90.3888];
+    const destCoords = primaryRoute?.dest_coords || NODE_COORDINATES[toLocation] || [23.7570, 90.3888];
     let selectedAltBounds = null;
 
     // Draw non-selected routes first, selected last so it stays on top
@@ -423,8 +423,8 @@ export default function JourneyRouteMap({
       const rawPts = (refined && refined.length >= 8)
         ? refined
         : (alt.road_coords?.length >= 20 && !hasStraightJump(alt.road_coords, 0.08))
-        ? alt.road_coords
-        : (alt.coords ? [origCoords, alt.coords, destCoords] : [origCoords, destCoords]);
+          ? alt.road_coords
+          : (alt.coords ? [origCoords, alt.coords, destCoords] : [origCoords, destCoords]);
 
       // If coordinates still have straight line cuts across blocks before OSRM responds, do not draw straight line
       if (hasStraightJump(rawPts, 0.08) && !refined) {
@@ -479,8 +479,8 @@ export default function JourneyRouteMap({
       const timeDiffLabel = alt.time_saved_min > 0
         ? `<div style="color:#16a34a;font-weight:600">Saves ~${alt.time_saved_min} min vs Primary</div>`
         : alt.time_saved_min < 0
-        ? `<div style="color:#d97706;font-weight:600">+${Math.abs(alt.time_saved_min)} min slower than Primary</div>`
-        : '';
+          ? `<div style="color:#d97706;font-weight:600">+${Math.abs(alt.time_saved_min)} min slower than Primary</div>`
+          : '';
 
       altPoly.bindPopup(
         popupShell(`
@@ -498,7 +498,7 @@ export default function JourneyRouteMap({
       );
 
       altPoly.on('mouseover', () => altPoly.setStyle({ weight: isSelected ? 8.5 : 6, opacity: 1 }));
-      altPoly.on('mouseout',  () => altPoly.setStyle({ weight: isSelected ? 7 : 4.5, opacity: isSelected ? 1.0 : 0.72 }));
+      altPoly.on('mouseout', () => altPoly.setStyle({ weight: isSelected ? 7 : 4.5, opacity: isSelected ? 1.0 : 0.72 }));
       altPoly.on('click', () => {
         onSelectAltRef.current?.(idx);
       });
@@ -528,15 +528,15 @@ export default function JourneyRouteMap({
   // ── 5. Render Primary Route Segments, Markers, Labels, & Hotspots ───────────
   useEffect(() => {
     const map = mapRef.current;
-    const rl  = routeLayerRef.current;
+    const rl = routeLayerRef.current;
     if (!map || !rl) return;
 
     rl.clearLayers();
     if (!fromLocation || !toLocation) return;
 
     const origCoords = primaryRoute?.origin_coords || NODE_COORDINATES[fromLocation] || [23.8069, 90.3687];
-    const destCoords = primaryRoute?.dest_coords   || NODE_COORDINATES[toLocation]   || [23.7570, 90.3888];
-    const bounds     = [origCoords, destCoords];
+    const destCoords = primaryRoute?.dest_coords || NODE_COORDINATES[toLocation] || [23.7570, 90.3888];
+    const bounds = [origCoords, destCoords];
 
     const isAltActive = showAlternative && typeof selectedAltIndex === 'number' && selectedAltIndex >= 0 && selectedAltIndex < resolvedAlts.length;
     const isPrimarySelected = !isAltActive;
@@ -546,14 +546,14 @@ export default function JourneyRouteMap({
     const sourceSegments = primaryRoute?.road_segments?.length
       ? primaryRoute.road_segments
       : [{
-          id: 'primary-0',
-          name: primaryRoute?.matchedCorridor || `${fromLocation} → ${toLocation}`,
-          highway: 'primary',
-          distance_km: primaryRoute?.distance_km,
-          coordinates: primaryRoute?.road_coords?.length >= 2
-            ? primaryRoute.road_coords
-            : [origCoords, destCoords],
-        }];
+        id: 'primary-0',
+        name: primaryRoute?.matchedCorridor || `${fromLocation} → ${toLocation}`,
+        highway: 'primary',
+        distance_km: primaryRoute?.distance_km,
+        coordinates: primaryRoute?.road_coords?.length >= 2
+          ? primaryRoute.road_coords
+          : [origCoords, destCoords],
+      }];
 
     // Clone segments so we don't mutate props
     const segments = sourceSegments.map(s => ({
@@ -658,7 +658,7 @@ export default function JourneyRouteMap({
       });
 
       poly.on('mouseover', () => poly.setStyle({ weight: isPrimarySelected ? 8.5 : 6, opacity: 1 }));
-      poly.on('mouseout',  () => poly.setStyle({ weight: isPrimarySelected ? 7 : 4.5, opacity: isPrimarySelected ? 1.0 : 0.68 }));
+      poly.on('mouseout', () => poly.setStyle({ weight: isPrimarySelected ? 7 : 4.5, opacity: isPrimarySelected ? 1.0 : 0.68 }));
       poly.on('click', () => {
         if (showAlternative) onSelectAltRef.current?.('primary');
       });
@@ -795,8 +795,8 @@ export default function JourneyRouteMap({
             ${selectedDate ? `<div>Date: <b>${selectedDate}</b></div>` : ''}
             <div>Time: <b>${formattedTime}</b></div>
             ${primaryRoute?.traffic_delay_min > 0
-              ? `<div>Est. Route Delay: <b style="color:${alertColor}">+${primaryRoute.traffic_delay_min} min</b></div>`
-              : ''}
+            ? `<div>Est. Route Delay: <b style="color:${alertColor}">+${primaryRoute.traffic_delay_min} min</b></div>`
+            : ''}
             <div style="margin-top:4px;font-size:10.5px;color:#64748b">Route-level congestion estimate</div>
           </div>
         `),
@@ -910,10 +910,10 @@ export default function JourneyRouteMap({
   const activeAlt = isAltSelected ? resolvedAlts[selectedAltIndex] : null;
   const activeAltStyle = isAltSelected ? ALT_STYLES[selectedAltIndex % ALT_STYLES.length] : null;
 
-  const eta         = activeAlt ? activeAlt.travel_time_min : primaryRoute?.travel_time_min;
-  const dist        = activeAlt ? activeAlt.distance_km : primaryRoute?.distance_km;
-  const delay       = activeAlt ? activeAlt.traffic_delay_min : primaryRoute?.traffic_delay_min;
-  const isEstimate  = activeAlt ? activeAlt.is_estimate !== false : primaryRoute?.is_estimate !== false;
+  const eta = activeAlt ? activeAlt.travel_time_min : primaryRoute?.travel_time_min;
+  const dist = activeAlt ? activeAlt.distance_km : primaryRoute?.distance_km;
+  const delay = activeAlt ? activeAlt.traffic_delay_min : primaryRoute?.traffic_delay_min;
+  const isEstimate = activeAlt ? activeAlt.is_estimate !== false : primaryRoute?.is_estimate !== false;
   const activeLevel = activeAlt ? (activeAlt.traffic_prediction || 'Low') : trafficPrediction;
   const activeColor = activeAltStyle ? activeAltStyle.color : PRIMARY_ROUTE_COLOR;
   const activeLabel = activeAlt
@@ -961,18 +961,17 @@ export default function JourneyRouteMap({
               )}
 
               {activeAlt && activeAlt.time_saved_min !== undefined && (
-                <span className={`font-semibold ${
-                  activeAlt.time_saved_min > 0
-                    ? 'text-green-600'
-                    : activeAlt.time_saved_min < 0
+                <span className={`font-semibold ${activeAlt.time_saved_min > 0
+                  ? 'text-green-600'
+                  : activeAlt.time_saved_min < 0
                     ? 'text-amber-600'
                     : 'text-slate-500'
-                }`}>
+                  }`}>
                   · {activeAlt.time_saved_min > 0
                     ? `Saves ${activeAlt.time_saved_min}m`
                     : activeAlt.time_saved_min < 0
-                    ? `+${Math.abs(activeAlt.time_saved_min)}m slower`
-                    : 'Same ETA'}
+                      ? `+${Math.abs(activeAlt.time_saved_min)}m slower`
+                      : 'Same ETA'}
                 </span>
               )}
             </div>
@@ -989,11 +988,10 @@ export default function JourneyRouteMap({
                       onToggleAlternative(true);
                     }
                   }}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold border transition ${
-                    showAlternative
-                      ? 'bg-blue-50 text-blue-700 border-blue-200'
-                      : 'bg-slate-50 text-blue-600 border-slate-200 hover:bg-blue-50'
-                  }`}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-[11px] sm:text-xs font-semibold border transition ${showAlternative
+                    ? 'bg-blue-50 text-blue-700 border-blue-200'
+                    : 'bg-slate-50 text-blue-600 border-slate-200 hover:bg-blue-50'
+                    }`}
                 >
                   <span>Alternative Routes ({resolvedAlts.length})</span>
                   <svg
@@ -1016,11 +1014,10 @@ export default function JourneyRouteMap({
                 onClick={() => {
                   if (onSelectAlternative) onSelectAlternative('primary');
                 }}
-                className={`w-full text-left p-2 rounded-xl border transition text-xs ${
-                  !isAltSelected
-                    ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-200'
-                    : 'bg-white/70 border-slate-200 hover:border-blue-300'
-                }`}
+                className={`w-full text-left p-2 rounded-xl border transition text-xs ${!isAltSelected
+                  ? 'bg-white border-blue-500 shadow-sm ring-1 ring-blue-200'
+                  : 'bg-white/70 border-slate-200 hover:border-blue-300'
+                  }`}
               >
                 <div className="flex items-center justify-between gap-2">
                   <span className="flex items-center gap-1.5 font-semibold text-slate-800 truncate">
@@ -1055,11 +1052,10 @@ export default function JourneyRouteMap({
                       if (onToggleAlternative && !showAlternative) onToggleAlternative(true);
                       if (onSelectAlternative) onSelectAlternative(idx);
                     }}
-                    className={`w-full text-left p-2 rounded-xl border transition text-xs ${
-                      isSel
-                        ? 'bg-white shadow-sm ring-1'
-                        : 'bg-white/70 border-slate-200 hover:border-slate-300'
-                    }`}
+                    className={`w-full text-left p-2 rounded-xl border transition text-xs ${isSel
+                      ? 'bg-white shadow-sm ring-1'
+                      : 'bg-white/70 border-slate-200 hover:border-slate-300'
+                      }`}
                     style={isSel ? { borderColor: st.color, '--tw-ring-color': st.color } : undefined}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -1109,11 +1105,10 @@ export default function JourneyRouteMap({
           type="button"
           onClick={() => setShowCorridors(v => !v)}
           title="Toggle verified telemetry overlay for Dhaka's 50 official monitored corridors"
-          className={`flex items-center gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-semibold border shadow-sm backdrop-blur-md transition ${
-            showCorridors
-              ? 'bg-white/95 text-slate-700 border-slate-200'
-              : 'bg-white/80 text-slate-400 border-slate-200/70'
-          }`}
+          className={`flex items-center gap-1.5 px-2 py-1 sm:px-3 sm:py-1.5 rounded-xl text-[10px] sm:text-xs font-semibold border shadow-sm backdrop-blur-md transition ${showCorridors
+            ? 'bg-white/95 text-slate-700 border-slate-200'
+            : 'bg-white/80 text-slate-400 border-slate-200/70'
+            }`}
         >
           <span className={`w-2 h-2 rounded-full ${showCorridors ? 'bg-green-500' : 'bg-slate-300'}`} />
           <span><span className="hidden sm:inline">Monitored </span>Corridors</span>
@@ -1139,10 +1134,10 @@ export default function JourneyRouteMap({
           </p>
           <div className="space-y-0.5 sm:space-y-1">
             {[
-              { label: 'Normal',    color: '#16a34a' },
-              { label: 'Moderate',  color: '#eab308' },
-              { label: 'Heavy',     color: '#ea580c' },
-              { label: 'Severe',    color: '#dc2626' },
+              { label: 'Normal', color: '#16a34a' },
+              { label: 'Moderate', color: '#eab308' },
+              { label: 'Heavy', color: '#ea580c' },
+              { label: 'Severe', color: '#dc2626' },
             ].map(({ label, color }) => (
               <div key={label} className="flex items-center gap-1.5 sm:gap-2">
                 <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
